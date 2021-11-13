@@ -1,0 +1,61 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: managed-certificate-role
+rules:
+- apiGroups: ["networking.gke.io"]
+  resources: ["managedcertificates"]
+  verbs: ["*"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["configmaps", "endpoints", "events"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: managed-certificate-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: managed-certificate-role
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.k8sServiceAccount }}
+  namespace: {{ .Values.namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: managed-certificate-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: managed-certificate-controller
+  template:
+    metadata:
+      labels:
+        app: managed-certificate-controller
+    spec:
+      serviceAccountName: {{ .Values.k8sServiceAccount }}
+      containers:
+      - name: managed-certificate-controller
+        image: gcr.io/gke-release/managed-certificate-controller:v1.0.5
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: ssl-certs
+          mountPath: "/etc/ssl/certs"
+          readOnly: true
+        - name: usrsharecacerts
+          mountPath: "/usr/share/ca-certificates"
+          readOnly: true
+      volumes:
+      - name: ssl-certs
+        hostPath:
+          path: "/etc/ssl/certs"
+      - name: usrsharecacerts
+        hostPath:
+          path: "/usr/share/ca-certificates"

@@ -1,0 +1,39 @@
+# Default values for gcp-ingress-configs.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: ""
+
+FrontendConfig:
+  # Specifies whether a FrontendConfig should be created
+  create: true
+  # Annotations to add to the FrontendConfig
+  annotations: {}
+  # The name of the FrontendConfig.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  spec: {}
+    # https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#https_redirect
+    # redirectToHttps:
+    #   enabled: true
+
+BackendConfig:
+  # Specifies whether a BackendConfig should be created
+  create: true
+  # Annotations to add to the BackendConfig
+  annotations: {}
+  # The name of the BackendConfig.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  spec: {}
+    # https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#direct_health
+    # securityPolicy:
+    #   name: "example-security-policy"
+    # healthCheck:
+    #   checkIntervalSec: interval
+    #   timeoutSec: timeout
+    #   healthyThreshold: health-threshold
+    #   unhealthyThreshold: unhealthy-threshold
+    #   type: HTTP
+    #   requestPath: /healthz

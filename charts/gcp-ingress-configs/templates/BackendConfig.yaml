@@ -1,0 +1,16 @@
+{{- if and .Values.BackendConfig.create .Values.BackendConfig.spec  -}}
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: {{ include "gcp-ingress-configs.BackendConfigName" . }}
+  labels:
+    {{- include "gcp-ingress-configs.labels" . | nindent 4 }}
+  {{- with .Values.BackendConfig.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.BackendConfig.spec }}
+spec:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

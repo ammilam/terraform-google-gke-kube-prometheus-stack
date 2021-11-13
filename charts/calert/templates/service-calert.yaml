@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "calert.fullname" . }}
+  labels:
+    {{- include "calert.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.calert.service.type }}
+  ports:
+    - port: {{ .Values.calert.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "calert.selectorLabels" . | nindent 4 }}

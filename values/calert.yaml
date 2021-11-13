@@ -1,0 +1,16 @@
+calert:
+  image:
+    repository: mrkaran/calert:latest
+    pullPolicy: IfNotPresent
+  alertmanager:
+    rooms:
+      %{~ if length(tolist(ROOMS)) == 0 } []
+      %{~ else }
+      %{~ for room in ROOMS }
+      "${room.name}": "${room.webhook}"
+      %{~ endfor }
+      %{~ endif }
+redis:
+  image:
+    repository: redis:latest
+    pullPolicy: IfNotPresent

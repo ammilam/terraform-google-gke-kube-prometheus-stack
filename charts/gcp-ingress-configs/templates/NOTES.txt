@@ -1,0 +1,7 @@
+1. Get the configs by running these commands:
+{{- if .Values.FrontendConfig.enabled }}
+  kubectl --namespace {{ .Release.Namespace }} get FrontendConfig {{ ".gcp-ingress-configs.FrontendConfigName" }}
+{{- end }}
+{{- if .Values.BackendConfig.enabled }}
+  kubectl --namespace {{ .Release.Namespace }} get BackendConfig {{ ".gcp-ingress-configs.BackendConfigName" }}
+{{- end }}

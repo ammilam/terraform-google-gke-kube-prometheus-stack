@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "calert.fullname" . }}
+  labels:
+    {{- include "calert.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.calert.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "calert.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/configmap-calert.yaml") . | sha256sum }}
+      labels:
+        {{- include "calert.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.calert.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ .Values.calert.serviceAccount.name }}
+      securityContext:
+        {{- toYaml .Values.calert.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.calert.securityContext | nindent 12 }}
+          image: "{{ .Values.calert.image.repository }}"
+          imagePullPolicy: {{ .Values.calert.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.calert.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.calert.resources | nindent 12 }}
+          volumeMounts:
+          - mountPath: /etc/calert/
+            name: config-dir
+      volumes:
+        - name: config-dir
+          projected:
+            sources:
+            - configMap:
+                name: {{ template "calert.fullname" . }}
+            - configMap:
+                name: {{ .Values.calert.alertmanager.templateName }}
+      {{- with .Values.calert.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.calert.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.calert.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

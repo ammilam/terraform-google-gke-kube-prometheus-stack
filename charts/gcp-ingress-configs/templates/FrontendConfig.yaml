@@ -1,0 +1,16 @@
+{{- if and .Values.FrontendConfig.create .Values.FrontendConfig.spec -}}
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: {{ include "gcp-ingress-configs.FrontendConfigName" . }}
+  labels:
+    {{- include "gcp-ingress-configs.labels" . | nindent 4 }}
+  {{- with .Values.FrontendConfig.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.FrontendConfig.spec }}
+spec:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

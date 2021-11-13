@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "calert.fullname" . }}
+  labels:
+    app: {{ template "calert.name" . }}
+    chart: {{ template "calert.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+data:
+  config.toml: |-
+{{- if .Values.calert.configmap }}
+    # User-supplied configuration:
+{{ tpl .Values.calert.configmap . | indent 4 }}
+{{- end }}
+{{- if .Values.calert.alertmanager.rooms }}
+    # Alerting configuration:
+    {{- range $key, $val := .Values.calert.alertmanager.rooms }}
+    [app.chat.{{ $key }}]
+    notification_url = {{ $val | quote }}
+    {{- end}}
+{{- end }}

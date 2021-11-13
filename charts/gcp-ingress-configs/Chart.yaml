@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 1.16.0
+description: Manages custom resources for Google Compute Ingress BackendConfig/FrontendConfig
+name: gcp-ingress-configs
+type: application
+version: 0.1.0

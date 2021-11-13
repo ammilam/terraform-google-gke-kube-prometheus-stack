@@ -1,0 +1,402 @@
+
+commonLabels:
+  prometheus: ${COMMON_LABEL}
+global:
+  rbac:
+    create: ${RBAC}
+    pspEnabled: ${PSP}
+prometheusOperator:
+  enabled: ${PROM_OPERATOR_ENABLED}
+  tls:
+    enabled: false
+  admissionWebhooks:
+    enabled: false
+  tlsProxy:
+    enabled: false
+prometheus:
+  serviceAccount:
+    create: false
+    name: ${KUBERNETES_SERVICE_ACCOUNT}
+  enabled: ${PROMETHEUS_ENABLED}
+  ingress:
+    enabled: ${PROMETHEUS_INGRESS_ENABLED}
+    %{~ if PROMETHEUS_INGRESS_ENABLED == true }
+    annotations:
+      kubernetes.io/ingress.class: gce
+      kubernetes.io/ingress.global-static-ip-name: ${PROMETHEUS_IP_NAME}
+      networking.gke.io/v1beta1.FrontendConfig: ${PROMETHEUS_INGRESS_CONFIGS}
+    hosts:
+    - ${PROMETHEUS_HOST_NAME}
+    paths:
+    - /*
+    pathType: ImplementationSpecific
+    tls:
+    - hosts:
+      - ${PROMETHEUS_HOST_NAME}
+      secretName: ${PROMETHEUS_CERT_NAME}
+    %{~ endif }
+  service:
+    enabled: true
+    %{~ if PROMETHEUS_INGRESS_ENABLED ==true }
+    annotations: # https://cloud.google.com/kubernetes-engine/docs/how-to/load-balance-ingress#service_annotations_related_to_ingress
+      cloud.google.com/backend-config: '{"default": "${PROMETHEUS_INGRESS_CONFIGS}"}'
+      cloud.google.com/neg: '{"ingress": true}'
+    %{~ endif }
+  prometheusSpec:
+    %{~ if PROMETHEUS_TO_STACKDRIVER_ENABLED == true}
+    volumes:
+    - name: ${PROMETHEUS_TO_STACKDRIVER_CONFIG_FILE}
+      configMap:
+        name: ${PROMETHEUS_TO_STACKDRIVER_CONFIG_FILE}
+    %{~ endif }
+    replicas: ${PROMETHEUS_REPLICAS}
+    logLevel: ${PROMETHEUS_LOG_LEVEL}
+    logFormat: json
+    podAntiAffinity: hard
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    serviceMonitorSelector:
+      matchLabels:
+        prometheus: ${COMMON_LABEL}
+    ruleSelector:
+      matchLabels:
+        prometheus: ${COMMON_LABEL}
+    podMonitorSelector:
+      matchLabels:
+        prometheus: ${COMMON_LABEL}
+    probeSelector:
+      matchLabels:
+        prometheus: ${COMMON_LABEL}
+    resources:
+      limits:
+        cpu: ${PROMETHEUS_RESOURCE_CPU_LIMIT}
+        memory: ${PROMETHEUS_RESOURCE_MEMORY_LIMIT}
+      requests:
+        cpu: ${PROMETHEUS_RESOURCE_CPU_REQUESTS}
+        memory: ${PROMETHEUS_RESOURCE_MEMORY_REQUESTS}
+    retentionSize: ${PROMETHEUS_RETENTION_SIZE_GB}GiB
+    retention: ${PROMETHEUS_RETENTION_LENGTH}
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ${PROMETHEUS_STORAGE_CLASS_NAME}
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: ${PROMETHEUS_RETENTION_SIZE_GB}Gi
+    %{~ if PROMETHEUS_TO_STACKDRIVER_ENABLED }
+    containers:
+    - name: stackdriver-sidecar
+      image: gcr.io/stackdriver-prometheus/stackdriver-prometheus-sidecar:0.8.2
+      imagePullPolicy: IfNotPresent
+      args:
+        - --stackdriver.project-id=${metrics_scope_project_id}
+        - --prometheus.wal-directory=/prometheus/prometheus-db/wal
+        - --stackdriver.kubernetes.location=us-central1
+        - --stackdriver.generic.location=us-central1
+        - --log.level=debug
+        - --config-file=/config/${PROMETHEUS_TO_STACKDRIVER_CONFIG_FILE}.yaml
+        - --stackdriver.kubernetes.cluster-name=${GKE_CLUSTER_NAME}
+        - --filter=__name__=~"${PROMETHEUS_TO_STACKDRIVER_FILTER}"
+      ports:
+        - name: stackdriver
+          containerPort: 9091
+      volumeMounts:
+        - name: prometheus-kube-prometheus-stack-prometheus-db
+          mountPath: /prometheus
+        - name: ${PROMETHEUS_TO_STACKDRIVER_CONFIG_FILE}
+          mountPath: /config
+    %{~ endif }
+    additionalScrapeConfigs:
+    %{~ if ADDITIONAL_SCRAPE_CONFIGS != [""] }
+      %{~ for job in ADDITIONAL_SCRAPE_CONFIGS }
+      - job_name: ${job.job_name}
+        metrics_path: ${job.metrics_path}
+        scrape_timeout: ${job.scrape_timeout}
+        scrape_interval: ${job.scrape_interval}
+        scheme: ${job.scheme}
+        %{~ if job.param_key != "" }
+        params:
+          ${job.param_key}: [${job.param_value}]
+        %{~ endif }
+        static_configs:
+        - targets:
+          %{~ for job in job.target }
+          - ${job}
+          %{~ endfor }
+      %{~ endfor }
+    %{~ endif }
+
+alertmanager:
+  enabled: ${ALERTMANAGER_ENABLED}
+  serviceAccount:
+    create: false
+    name: ${KUBERNETES_SERVICE_ACCOUNT}
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: [alertname]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: blackhole
+      routes:
+        %{~ if length(tolist(ALERTMANAGER_WEBHOOK_RECEIVERS)) != 0 }
+        %{~ for receiver in ALERTMANAGER_WEBHOOK_RECEIVERS }
+        - receiver: "${receiver.name}"
+          continue: ${receiver.continue}
+
+          %{~ if receiver.group_by != null }
+          group_by: "${receiver.group_by}"
+          %{~ endif }
+
+          %{~ if receiver.repeat_interval != null }
+          repeat_interval: "${receiver.repeat_interval}"
+          %{~ endif }
+
+          match_re:
+            %{~ if receiver.match_alertname != null }
+            alertname: "${receiver.match_alertname}"
+            %{~ endif }
+
+            %{~ if receiver.match_namespace != null }
+            namespace: "${receiver.match_namespace}"
+            %{~ endif }
+
+            %{~ if receiver.match_company_program != null }
+            program: "${receiver.match_company_program}"
+            %{~ endif }
+
+            %{~ if receiver.match_gitlab_repo != null }
+            project: "${receiver.match_gitlab_repo}"
+            %{~ endif }
+
+            %{~ if receiver.match_gitlab_group_id != null }
+            project: "${receiver.match_gitlab_group_id}"
+            %{~ endif }
+        %{~ endfor }
+        %{~ endif }
+
+        %{~ if length(tolist(ALERTMANAGER_WEBEX_TEAMS_RECEIVERS )) != 0 }
+        %{~ for receiver in ALERTMANAGER_WEBEX_TEAMS_RECEIVERS }
+        - receiver: "${receiver.name}"
+          continue: ${receiver.continue}
+
+          %{~ if receiver.group_by != null }
+          group_by: "${receiver.group_by}"
+          %{~ endif }
+
+          %{~ if receiver.repeat_interval != null }
+          repeat_interval: "${receiver.repeat_interval}"
+          %{~ endif }
+
+          match_re:
+
+            %{~ if receiver.match_alertname != null }
+            alertname: "${receiver.match_alertname}"
+            %{~ endif }
+
+            %{~ if receiver.match_namespace != null }
+            namespace: "${receiver.match_namespace}"
+            %{~ endif }
+
+            %{~ if receiver.match_gitlab_repo != null }
+            project: "${receiver.match_gitlab_repo}"
+            %{~ endif }
+
+            %{~ if receiver.match_gitlab_group_id != null }
+            project: "${receiver.match_gitlab_group_id}"
+            %{~ endif }
+
+            %{~ if receiver.match_company_program != null }
+            program: "${receiver.match_company_program}"
+            %{~ endif }
+        %{~ endfor }
+        %{~ endif }
+
+        %{~ if ALERTMANAGER_ALERTS_TO_SILENCE != "" }
+        - receiver: blackhole
+          continue: true
+          match:
+            alertname: ${ALERTMANAGER_ALERTS_TO_SILENCE}
+        %{~ endif }
+    receivers:
+    %{~ if length(tolist(ALERTMANAGER_WEBEX_TEAMS_RECEIVERS)) != 0 }
+      %{~ for receiver in ALERTMANAGER_WEBEX_TEAMS_RECEIVERS }
+      - name: ${receiver.name}
+        webhook_configs:
+        - url: ${receiver.endpoint}
+          send_resolved: ${receiver.send_resolved}
+      %{~ endfor }
+      %{~ endif }
+
+      %{~ if length(tolist(ALERTMANAGER_WEBHOOK_RECEIVERS)) != 0 }
+      %{~ for receiver in ALERTMANAGER_WEBHOOK_RECEIVERS }
+      - name: ${receiver.name}
+        webhook_configs:
+        - url: "http://calert:6000/create?room_name=${receiver.name}"
+          send_resolved: ${receiver.send_resolved}
+      %{~ endfor }
+      %{~ endif }
+      - name: blackhole
+  ingress:
+    enabled: ${ALERTMANAGER_INGRESS_ENABLED}
+  service:
+    type: ClusterIP
+  alertmanagerSpec:
+    image:
+      repository: quay.io/prometheus/alertmanager
+      tag: v0.21.0
+    logFormat: json
+    logLevel: ${ALERTMANAGER_LOG_LEVEL}
+    replicas: ${ALERTMANAGER_REPLICAS}
+    retention: 120h
+    storage:
+      volumeClaimTemplate:
+          spec:
+            storageClassName: ${ALERTMANAGER_STORAGE_CLASS_NAME}
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 1Gi
+    resources:
+      limits:
+        cpu: ${ALERTMANAGER_RESOURCE_CPU_LIMIT}
+        memory: ${ALERTMANAGER_RESOURCE_MEMORY_LIMIT}
+      requests:
+        cpu: ${ALERTMANAGER_RESOURCE_CPU_REQUESTS}
+        memory: ${ALERTMANAGER_RESOURCE_MEMORY_REQUESTS}
+    podAntiAffinity: hard
+    podAntiAffinityTopologyKey: kubernetes.io/hostname
+
+grafana:
+  %{~ if GOOGLE_APPLICATION_CREDENTIALS_SECRET != "" }
+  extraSecretMounts:
+  - name: ${GOOGLE_APPLICATION_CREDENTIALS_SECRET}
+    mountPath: /credentials
+    secretName: ${GOOGLE_APPLICATION_CREDENTIALS_SECRET}
+    readOnly: true
+    subPath: ""
+  env:
+    GOOGLE_APPLICATION_CREDENTIALS: /credentials/account.json
+  %{~ endif }
+  adminPassword: ${GRAFANA_ADMIN_PASSWORD}
+  %{~ if GRAFANA_PLUGINS != [""] }
+  plugins:
+    %{~ for plugin in GRAFANA_PLUGINS }
+    - ${plugin}
+    %{~ endfor }
+  %{~ endif }
+  resources:
+    limits:
+      cpu: ${GRAFANA_RESOURCE_CPU_LIMIT}
+      memory: ${GRAFANA_RESOURCE_MEMORY_LIMIT}
+    requests:
+      cpu: ${GRAFANA_RESOURCE_CPU_REQUESTS}
+      memory: ${GRAFANA_RESOURCE_MEMORY_REQUESTS}
+  replicas: ${GRAFANA_REPLICAS}
+  enabled: ${GRAFANA_ENABLED}
+  %{~ if GRAFANA_ADDITIONAL_DATASOURCES != "" }
+  additionalDataSources:
+  ${GRAFANA_ADDITIONAL_DATASOURCES}
+  %{~ endif }
+  annotations: {}
+  labels: {}
+  serviceAccount:
+    create: false
+    name: ${KUBERNETES_SERVICE_ACCOUNT}
+  ldap:
+    enabled: false
+  deploymentStrategy:
+    type: Recreate
+  persistence:
+    type: pvc
+    enabled: true
+    storageClassName: ${GRAFANA_STORAGE_CLASS_NAME}
+    accessModes:
+    - ReadWriteOnce
+    size: 10Gi
+    finalizers:
+    - kubernetes.io/pvc-protection
+
+  grafana.ini:
+    security:
+      cookie_samesite: false
+    users:
+      auto_assign_org_role: Admin
+    server:
+      root_url: https://${GRAFANA_HOST_NAME}/
+    auth.anonymous:
+      enabled: false
+    auth.ldap:
+      enabled: false
+    %{~ if GRAFANA_GOOGLE_AUTH_ENABLED == true }
+    auth.google:
+      enabled: ${GRAFANA_GOOGLE_AUTH_ENABLED}
+      client_id: ${CLIENT_ID}
+      client_secret: ${CLIENT_SECRET}
+      scopes: https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email
+      auth_url: https://accounts.google.com/o/oauth2/auth
+      token_url: https://accounts.google.com/o/oauth2/token
+      allowed_domains: company.com company.corp
+      allow_sign_up: true
+    %{~ endif }
+  image:
+    repository: grafana/grafana
+    tag: 8.1.7
+  sidecar:
+    dashboards:
+      enabled: true
+      label: ${GRAFANA_DASHBOARD_LABEL}
+      annotations: {}
+      searchNamespace: ${NAMESPACE}
+    datasources:
+      enabled: true
+      defaultDatasourceEnabled: true
+  ingress:
+    enabled: ${GRAFANA_INGRESS_ENABLED}
+    %{~ if GRAFANA_INGRESS_ENABLED == true }
+    annotations:
+      kubernetes.io/ingress.class: gce
+      kubernetes.io/ingress.global-static-ip-name: ${GRAFANA_IP_NAME}
+      networking.gke.io/v1beta1.FrontendConfig: ${GRAFANA_INGRESS_CONFIGS}
+      %{~ endif }
+    hosts:
+      - ${GRAFANA_HOST_NAME}
+    path: /*
+    pathType: ImplementationSpecific
+    %{~ if !GOOGLE_MANAGED_CERT }
+    tls:
+    - secretName: ${GRAFANA_CERT_NAME}
+      hosts:
+        - ${GRAFANA_HOST_NAME}
+    %{~ endif }
+  service:
+    enabled: true
+    %{~ if GRAFANA_INGRESS_ENABLED }
+    annotations: # https://cloud.google.com/kubernetes-engine/docs/how-to/load-balance-ingress#service_annotations_related_to_ingress
+      cloud.google.com/backend-config: '{"default": "${GRAFANA_INGRESS_CONFIGS}"}'
+      cloud.google.com/neg: '{"ingress": true}'
+    %{~ endif }
+coreDns:
+  enabled: false
+kubeDns:
+  enabled: true
+kubeControllerManager:
+  enabled: true
+kubeScheduler:
+  enabled: true
+kubeStateMetrics:
+  enabled: true
+  serviceMonitor:
+    honorLabels: true
+    selectorOverride: {}
+    selfMonitor:
+      enabled: false
+  %{~ if ENV == "non-prod" }
+nodeExporter:
+  enabled: false
+  %{~ endif }
