@@ -61,7 +61,7 @@ module "kube_prometheus_stack" {
     helm       = # reference helm provider config here
   }
 
-  source                = "git::https://gitlab.gcp.company.com/shared-services/monitoring.git//modules/kube-prometheus-stack?ref=<most-recent-tag>"
+  source                = "<source>"
   project_id            = "" # project_id containing the cluster
   metrics_scope_project_id = # monitoring scope project id to get gcp metrics
   dns_managed_zone      = # dns managed zone for dns record creation
