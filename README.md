@@ -61,17 +61,21 @@ module "kube_prometheus_stack" {
     helm       = # reference helm provider config here
   }
 
-  source                = "<source>"
-  project_id            = "" # project_id containing the cluster
-  metrics_scope_project_id = # monitoring scope project id to get gcp metrics
-  dns_managed_zone      = # dns managed zone for dns record creation
-  dns_public_zone_project_id        = # project containing dns managed zone for dns record creation
-  dns_name              = # dns managed zone name for dns record creation
-  gke_cluster_name      = # pass in variable for gke cluster
+  source                      = "<source>"
+  env                         = "prod" # prod or non-prod, particularly useful if creating review namespaces in a single cluster
+  suffix                      = "" # dynamically generated suffix for preventing resoure naming conflicts
+  project_id                  = "" # project_id containing the cluster
+  metrics_scope_project_id    = "" # monitoring scope project id to get gcp metrics
+  dns_managed_zone            = "" # dns managed zone for dns record creation
+  dns_managed_zone_project_id = "" # project containing dns public zone
+  dns_public_zone             = "" # dns public zone for dns record creation
+  dns_public_zone_project_id  = "" # project containing dns public zone for dns record creation
+  dns_name                    = "" # dns managed zone name for dns record creation
+  gke_cluster_name            = "" # pass in variable for gke cluster name
 
   # prometheus configs
   prometheus_enabled                  = true
-  prometheus_ingress_enabled          = false
+  prometheus_ingress_enabled          = true
   prometheus_replicas                 = 2
   prometheus_resource_cpu_limit       = "2"
   prometheus_resource_memory_limit    = "8Gi"
@@ -96,7 +100,7 @@ module "kube_prometheus_stack" {
 
   # alertmanager configs
   alertmanager_enabled                  = true
-  alertmanager_ingress_enabled          = false
+  alertmanager_ingress_enabled          = true
   alertmanager_replicas                 = 1
   alertmanager_resource_cpu_limit       = "500m"
   alertmanager_resource_memory_limit    = "256Mi"
@@ -117,8 +121,7 @@ module "kube_prometheus_stack" {
 
   # grafana configs
   grafana_enabled                  = true
-  grafana_ingress_enabled          = false
-  grafana_replicas                 = 2
+  grafana_ingress_enabled          = true
   grafana_replicas                 = 1
   grafana_resource_cpu_limit       = "500m"
   grafana_resource_memory_limit    = "256Mi"
@@ -223,7 +226,7 @@ Below is a PrometheusRule config used in the shared services implementation, con
 resource "helm_release" "gitlab_prometheus_rule" {
   name             = "gitlab-prometheus-rules"
   namespace        = var.monitoring_namespace
-  repository       = "https://artifactory.company.com/artifactory/company-helm"
+  repository       = "https://ammilam.github.io/helm-charts/"
   chart            = "prometheus-rule"
   version          = "0.1.6"
   create_namespace = "false"
@@ -303,7 +306,8 @@ In order to start provisioning Grafana dashboards, simply create a directory and
 # grafana dashboards module
 module "grafana_dashboards" {
 
-  source                       = "git::https://gitlab.gcp.company.com/shared-services/monitoring.git//modules/grafana-dashboards?ref=<most-recent-tag>"
+  source                       = "ammilam/grafana-dashboards/kubernetes"
+  version                      = "0.1.1"
   grafana_dashboards_directory = "${path.module}/grafana-dashboards" # directory containing the dashboards
   monitoring_namespace         = module.kube_prometheus_stack.monitoring_namespace
 }
@@ -316,7 +320,8 @@ Below is the shared services implementation, contained under [/infra/main.tf](/i
 ```terraform
 module "grafana_dashboards" {
 
-  source                       = "git::https://gitlab.gcp.company.com/shared-services/monitoring.git//modules/grafana-dashboards?ref=<most-recent-tag>"
+  source                       = "ammilam/grafana-dashboards/kubernetes"
+  version                      = "0.1.1"
   grafana_dashboards_directory = "${path.module}/grafana-dashboards"
   monitoring_namespace         = module.kube_prometheus_stack.monitoring_namespace
   grafana_dashboard_label      = local.grafana_dashboard_label
