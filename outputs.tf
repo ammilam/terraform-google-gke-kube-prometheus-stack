@@ -2,6 +2,14 @@ output "grafana_base_url" {
   value = "https://${local.grafana_host}/"
 }
 
+output "alertmanager_base_url" {
+  value = "https://${local.alertmanager_host}/"
+}
+
+output "prometheus_base_url" {
+  value = "https://${local.prometheus_host}/"
+}
+
 output "helm_values" {
   value = helm_release.prometheus_stack.values
 }
