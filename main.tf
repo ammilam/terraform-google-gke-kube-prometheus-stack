@@ -15,17 +15,9 @@ locals {
 }
 
 
-# locals definitions to handle naming of resources for dynamic review env/namespace
-locals {
-  ns_name = terraform.workspace == "default" ? "monitoring" : substr(replace("mon-${local.env.short_id}-${var.suffix}", "-", ""), 0, 50)
-  sa_name = terraform.workspace == "default" ? "kube-prometheus-stack" : substr(replace("kube-prom-stack-${local.env.short_id}", "-", ""), 0, 15)
-}
-
 ####################
 # Shared Resources #
 ####################
-
-
 
 
 # kubernetes service account creation with workload identity annotations
@@ -49,7 +41,7 @@ resource "google_service_account_iam_member" "monitoring" {
 
 # monitoring google service account to be mapped to grafana deployment
 resource "google_service_account" "kube_prometheus_stack" {
-  account_id   = local.sa_name
+  account_id   = terraform.workspace == "default" ? "kube-prom-stack" : "kube-prom-stack-${var.suffix}"
   display_name = "kube-prometheus-stack service account"
   project      = var.metrics_scope_project_id
 }
@@ -180,7 +172,7 @@ resource "helm_release" "managed_cert_controller" {
 # Grafana Infra #
 #################
 
-# Provision a Private DNS name for grafana.  Currenlty this is only internal to GCP and will not populate the name externally
+# Provision a Private DNS name for grafana.
 resource "google_dns_record_set" "grafana" {
   project      = var.dns_managed_zone_project_id
   count        = var.grafana_ingress_enabled == true && var.dns_managed_zone != "" ? 1 : 0
@@ -191,7 +183,7 @@ resource "google_dns_record_set" "grafana" {
   rrdatas      = [google_compute_global_address.grafana[count.index].address]
 }
 
-# Provision a Public DNS name for grafana.  Currenlty this is only internal to GCP and will not populate the name externally
+# Provision a Public DNS name for grafana.
 resource "google_dns_record_set" "grafana_public" {
   project      = var.dns_public_zone_project_id
   count        = var.grafana_ingress_enabled == true && var.dns_public_zone != "" ? 1 : 0
@@ -211,7 +203,7 @@ resource "google_compute_global_address" "grafana" {
   description = "Reservation for grafana IP"
 }
 
-# Create kubernetes secret to store the grafana PKI SSL Certificate retrieved from google secrets manager
+# Create kubernetes secret to store the grafana PKI
 resource "kubernetes_secret" "grafana_pki" {
   count = var.google_managed_cert == false && var.grafana_ingress_enabled == true ? 1 : 0
   metadata {
@@ -332,8 +324,7 @@ resource "helm_release" "prometheus_gcp_ingress_configs" {
   ]
 }
 
-# Provision a DNS name for prometheus.  Currenlty this is only internal to GCP and will not populate the name externally
-# Provision a Private DNS name for grafana.  Currenlty this is only internal to GCP and will not populate the name externally
+# Provision a Private DNS name for grafana.  
 resource "google_dns_record_set" "prometheus" {
   project      = var.dns_managed_zone_project_id
   count        = var.prometheus_ingress_enabled == true && var.dns_managed_zone != "" ? 1 : 0
@@ -344,7 +335,7 @@ resource "google_dns_record_set" "prometheus" {
   rrdatas      = [google_compute_global_address.prometheus[count.index].address]
 }
 
-# Provision a Private DNS name for grafana.  Currenlty this is only internal to GCP and will not populate the name externally
+# Provision a Public DNS name for grafana.
 resource "google_dns_record_set" "prometheus_public" {
   project      = var.dns_public_zone_project_id
   count        = var.prometheus_ingress_enabled == true && var.dns_public_zone != "" ? 1 : 0
@@ -419,7 +410,53 @@ resource "google_compute_global_address" "prometheus" {
 # Alertmanager Resources #
 ##########################
 
-# Provision a DNS name for prometheus.  Currenlty this is only internal to GCP and will not populate the name externally
+# GCP Ingress Custom Resources that utilizes iap for use with google auth magic
+resource "helm_release" "alertmanager_gcp_ingress_configs" {
+  name             = terraform.workspace == "default" ? "prometheus" : substr(replace("rev-prom-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
+  count            = var.alertmanager_ingress_enabled == true ? 1 : 0
+  namespace        = var.namespace
+  chart            = "${path.module}/charts/gcp-ingress-configs"
+  create_namespace = "false"
+  max_history      = 10
+  values = [
+    <<-EOT
+    FrontendConfig:
+      name: alertmanager
+      spec:
+        # https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#https_redirect
+        redirectToHttps:
+          enabled: true
+    BackendConfig:
+      name: alertmanager
+      spec:
+        healthCheck:
+          type: HTTP
+          requestPath: /-/healthy
+          port: 9091
+      logging:
+        enable: true
+        # https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#direct_health
+    EOT
+  ]
+}
+
+# Create kubernetes secret to store the Alertmanager PKI
+resource "kubernetes_secret" "alertmanager_pki" {
+  count = var.google_managed_cert == false && var.alertmanager_ingress_enabled == true ? 1 : 0
+  metadata {
+    name      = local.alertmanager_cert_name
+    namespace = var.namespace
+  }
+
+  type = "kubernetes.io/tls"
+
+  data = {
+    "tls.crt" = nonsensitive(var.alertmanager_tls_cert)
+    "tls.key" = nonsensitive(var.alertmanager_tls_private_key)
+  }
+}
+
+# Provision a Private DNS name for prometheus.
 resource "google_dns_record_set" "alertmanager" {
   project      = var.dns_managed_zone_project_id
   count        = var.alertmanager_ingress_enabled == true && var.dns_managed_zone != "" ? 1 : 0
@@ -430,6 +467,7 @@ resource "google_dns_record_set" "alertmanager" {
   rrdatas      = [google_compute_global_address.alertmanager[count.index].address]
 }
 
+# Provision a Public DNS name for prometheus.
 resource "google_dns_record_set" "alertmanager_public" {
   project      = var.dns_public_zone_project_id
   count        = var.alertmanager_ingress_enabled == true && var.dns_public_zone != "" ? 1 : 0
@@ -476,8 +514,10 @@ resource "helm_release" "prometheus_stack" {
       ALERTMANAGER_ENABLED                  = var.alertmanager_enabled
       GRAFANA_HOST_NAME                     = local.grafana_host
       PROMETHEUS_HOST_NAME                  = local.prometheus_host
+      ALERTMANAGER_HOST_NAME                = local.alertmanager_host
       GRAFANA_IP_NAME                       = local.grafana_ip_name
       PROMETHEUS_IP_NAME                    = local.prometheus_ip_name
+      ALERTMANAGER_IP_NAME                  = local.alertmanager_ip_name
       GRAFANA_INGRESS_ENABLED               = var.grafana_ingress_enabled
       GRAFANA_PKI                           = var.google_managed_cert == false ? local.grafana_cert_name : ""
       KUBERNETES_SERVICE_ACCOUNT            = kubernetes_service_account.kube_prometheus_stack.metadata.0.name
@@ -485,8 +525,9 @@ resource "helm_release" "prometheus_stack" {
       CLIENT_ID                             = var.grafana_oauth_client_id
       GRAFANA_INGRESS_CONFIGS               = "grafana"
       PROMETHEUS_INGRESS_CONFIGS            = "prometheus"
+      ALERTMANAGER_INGRESS_CONFIGS          = "alertmanager"
       GRAFANA_ADDITIONAL_DATASOURCES        = (var.grafana_additional_datasources)
-      NAMESPACE                             = local.ns_name
+      NAMESPACE                             = var.namespace
       ENV                                   = var.env
       GOOGLE_APPLICATION_CREDENTIALS_SECRET = var.google_application_credentials_secret
       GRAFANA_INGRESS_ENABLED               = var.grafana_ingress_enabled
@@ -523,6 +564,7 @@ resource "helm_release" "prometheus_stack" {
       GOOGLE_MANAGED_CERT                   = var.google_managed_cert
       GRAFANA_CERT_NAME                     = local.grafana_cert_name
       PROMETHEUS_CERT_NAME                  = local.prometheus_cert_name
+      ALERTMANAGER_CERT_NAME                = local.alertmanager_cert_name
       ADDITIONAL_SCRAPE_CONFIGS = [
         for job in var.prometheus_scrape_configs : {
           job_name        = try(job.job_name, "")
