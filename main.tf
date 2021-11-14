@@ -25,33 +25,26 @@ locals {
 # Shared Resources #
 ####################
 
-# Create monitoring namespace
-resource "kubernetes_namespace" "monitoring" {
-  metadata {
-    name = local.ns_name
-  }
-}
+
+
 
 # kubernetes service account creation with workload identity annotations
 resource "kubernetes_service_account" "kube_prometheus_stack" {
   metadata {
     name      = "kube-prometheus-stack"
-    namespace = kubernetes_namespace.monitoring.metadata.0.name
+    namespace = var.namespace
     annotations = {
       "iam.gke.io/gcp-service-account" = google_service_account.kube_prometheus_stack.email
     }
   }
   automount_service_account_token = true
-  depends_on = [
-    kubernetes_namespace.monitoring,
-  ]
 }
 
 # GSA to KSA Mapping for the monitoring sa
 resource "google_service_account_iam_member" "monitoring" {
   service_account_id = google_service_account.kube_prometheus_stack.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.monitoring.metadata.0.name}/${kubernetes_service_account.kube_prometheus_stack.metadata.0.name}]"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.namespace}/${kubernetes_service_account.kube_prometheus_stack.metadata.0.name}]"
 }
 
 # monitoring google service account to be mapped to grafana deployment
@@ -78,7 +71,7 @@ resource "google_project_iam_member" "monitoring_viewer" {
 resource "helm_release" "calert" {
   name        = "calert"
   count       = var.enable_calert ? 1 : 0
-  namespace   = kubernetes_namespace.monitoring.metadata.0.name
+  namespace   = var.namespace
   chart       = "${path.module}/charts/calert"
   max_history = 10
 
@@ -169,14 +162,14 @@ locals {
 resource "helm_release" "managed_cert_controller" {
   name             = "managed-cert-contorller"
   count            = var.google_managed_cert == true ? 1 : 0
-  namespace        = kubernetes_namespace.monitoring.metadata.0.name
+  namespace        = var.namespace
   chart            = "${path.module}/charts/managed-cert-controller"
   create_namespace = "false"
   max_history      = 10
 
   values = [
     <<-EOT
-    namespace: ${kubernetes_namespace.monitoring.metadata.0.name}
+    namespace: ${var.namespace}
     k8sServiceAccount: ${kubernetes_service_account.kube_prometheus_stack.metadata.0.name}
     EOT
   ]
@@ -223,7 +216,7 @@ resource "kubernetes_secret" "grafana_pki" {
   count = var.google_managed_cert == false && var.grafana_ingress_enabled == true ? 1 : 0
   metadata {
     name      = local.grafana_cert_name
-    namespace = kubernetes_namespace.monitoring.metadata.0.name
+    namespace = var.namespace
   }
 
   type = "kubernetes.io/tls"
@@ -240,7 +233,7 @@ resource "kubernetes_secret" "grafana_oauth" {
   count = var.grafana_ingress_enabled == true ? 1 : 0
   metadata {
     name      = "iap-credentials"
-    namespace = kubernetes_namespace.monitoring.metadata.0.name
+    namespace = var.namespace
   }
   data = {
     "client_secret" = nonsensitive(var.grafana_oauth_client_secret)
@@ -253,7 +246,7 @@ resource "kubernetes_secret" "grafana_oauth" {
 resource "helm_release" "grafana_managed_cert" {
   name             = local.grafana_cert_name
   count            = var.google_managed_cert == true ? 1 : 0
-  namespace        = kubernetes_namespace.monitoring.metadata.0.name
+  namespace        = var.namespace
   chart            = "${path.module}/charts/managed-cert"
   create_namespace = "false"
   max_history      = 10
@@ -275,7 +268,7 @@ resource "helm_release" "grafana_managed_cert" {
 resource "helm_release" "grafana_gcp_ingress_configs" {
   name             = terraform.workspace == "default" ? "grafana" : substr(replace("rev-graf-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
   count            = var.grafana_ingress_enabled == true ? 1 : 0
-  namespace        = kubernetes_namespace.monitoring.metadata.0.name
+  namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
   create_namespace = "false"
   max_history      = 10
@@ -313,7 +306,7 @@ resource "helm_release" "grafana_gcp_ingress_configs" {
 resource "helm_release" "prometheus_gcp_ingress_configs" {
   name             = terraform.workspace == "default" ? "prometheus" : substr(replace("rev-prom-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
   count            = var.prometheus_ingress_enabled == true ? 1 : 0
-  namespace        = kubernetes_namespace.monitoring.metadata.0.name
+  namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
   create_namespace = "false"
   max_history      = 10
@@ -366,7 +359,7 @@ resource "kubernetes_secret" "prometheus_pki" {
   count = var.google_managed_cert == false && var.prometheus_ingress_enabled == true ? 1 : 0
   metadata {
     name      = local.prometheus_cert_name
-    namespace = kubernetes_namespace.monitoring.metadata.0.name
+    namespace = var.namespace
   }
 
   type = "kubernetes.io/tls"
@@ -381,7 +374,7 @@ resource "kubernetes_secret" "prometheus_pki" {
 resource "kubernetes_config_map" "config_file_for_sidecar" {
   count = var.prometheus_to_stackdriver_enabled == true ? 1 : 0
   metadata {
-    namespace = kubernetes_namespace.monitoring.metadata.0.name
+    namespace = var.namespace
     name      = local.config_file_name
   }
 
@@ -408,6 +401,10 @@ resource "kubernetes_storage_class" "pd_ssd" {
     type = "pd-ssd"
   }
   volume_binding_mode = "WaitForFirstConsumer"
+  depends_on = [
+    var.namespace,
+    var.gke_cluster_name
+  ]
 }
 
 resource "google_compute_global_address" "prometheus" {
@@ -457,7 +454,7 @@ resource "google_compute_global_address" "alertmanager" {
 ######################################
 resource "helm_release" "prometheus_stack" {
   name             = "kube-prometheus-stack"
-  namespace        = kubernetes_namespace.monitoring.metadata.0.name
+  namespace        = var.namespace
   chart            = "${path.module}/charts/kube-prometheus-stack"
   max_history      = 10
   wait             = false
@@ -545,14 +542,10 @@ resource "helm_release" "prometheus_stack" {
           match_alertname       = try(channel.match_alertname, "")
           group_by              = try(channel.group_by, "")
           repeat_interval       = try(channel.repeat_interval, "")
-          match_davita_program  = try(channel.match_davita_program, "")
           match_gitlab_group_id = try(channel.match_gitlab_group_id, "")
           match_gitlab_repo     = try(channel.match_repo, "")
-          continue              = try(channel.continue, null)
+          continue              = try(channel.continue, false)
           send_resolved         = try(channel.send_resolved, false)
-          webhook_urls = [
-            "http://calert:6000/create?room_name=${channel.alertmanager_receiver_name}"
-          ]
         }
       ]
       ALERTMANAGER_WEBEX_TEAMS_RECEIVERS = [
@@ -563,24 +556,20 @@ resource "helm_release" "prometheus_stack" {
           match_alertname       = try(channel.match_alertname, "")
           group_by              = try(channel.group_by, "")
           repeat_interval       = try(channel.repeat_interval, "")
-          match_davita_program  = try(channel.match_davita_program, "")
           match_gitlab_group_id = try(channel.match_gitlab_group_id, "")
           match_gitlab_repo     = try(channel.match_repo, "")
-          continue              = try(channel.continue, null)
+          continue              = try(channel.continue, false)
           send_resolved         = try(channel.send_resolved, false)
         }
       ]
     }))
-  ]
-  depends_on = [
-    kubernetes_namespace.monitoring,
   ]
 }
 
 resource "helm_release" "pushgateway" {
   name      = "pushgateway"
   count     = var.pushgateway_enabled == true ? 1 : 0
-  namespace = kubernetes_namespace.monitoring.metadata.0.name
+  namespace = var.namespace
   chart     = "${path.module}/charts/prometheus-pushgateway"
 
   max_history = 10
@@ -595,7 +584,7 @@ resource "helm_release" "pushgateway" {
           cpu: ${var.pushgateway_resource_cpu_requests}
           memory: ${var.pushgateway_resource_memory_requests}
       serviceMonitor:
-        namespace: ${kubernetes_namespace.monitoring.metadata.0.name}
+        namespace: ${var.namespace}
         prometheusServiceMonitorLabel: ${var.prom_stack_common_label}
       resources:
         limits:

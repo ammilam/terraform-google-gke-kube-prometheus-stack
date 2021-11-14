@@ -10,10 +10,6 @@ output "kube_prometheus_stack_service_account" {
   value = google_service_account.kube_prometheus_stack.email
 }
 
-output "monitoring_namespace" {
-  value = kubernetes_namespace.monitoring.metadata.0.name
-}
-
 output "kube_prometheus_stack_gcp_service_account" {
   value = google_service_account.kube_prometheus_stack.name
 }
@@ -27,5 +23,5 @@ output "kube_prometheus_stack_k8s_service_account" {
 }
 
 output "pushgateway_endpoint" {
-  value = "pushgateway-prometheus-pushgateway.${kubernetes_namespace.monitoring.metadata.0.name}.svc.cluster.local"
+  value = "pushgateway-prometheus-pushgateway.${var.namespace}.svc.cluster.local"
 }

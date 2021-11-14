@@ -64,6 +64,7 @@ module "kube_prometheus_stack" {
   source                      = "<source>"
   env                         = "prod" # prod or non-prod, particularly useful if creating review namespaces in a single cluster
   suffix                      = "" # dynamically generated suffix for preventing resoure naming conflicts
+  namespace                   = "" # namespace in which to install kube-prometheus-stack
   project_id                  = "" # project_id containing the cluster
   metrics_scope_project_id    = "" # monitoring scope project id to get gcp metrics
   dns_managed_zone            = "" # dns managed zone for dns record creation
@@ -82,6 +83,8 @@ module "kube_prometheus_stack" {
   prometheus_resource_cpu_requests    = "2"
   prometheus_resource_memory_requests = "6Gi"
   prometheus_retention_size_gb        = "200"
+  prometheus_tls_cert                 = "" # value containing prometheus tls cert
+  prometheus_tls_private_key          = "" # value containing prometheus tls private key
   prometheus_to_stackdriver_enabled    = true # if set to true, as stackdriver sidecar is added to prometheus that sends selected variables
   stackdriver_metrics_filter          = ["prometheus_metric", "prometheus_metric"] # pass in list of metrics to send from prometheus to stackdriver
   # adds new prometheus scrape configs
@@ -106,7 +109,7 @@ module "kube_prometheus_stack" {
   alertmanager_resource_memory_limit    = "256Mi"
   alertmanager_resource_cpu_requests    = "200m"
   alertmanager_resource_memory_requests = "128Mi"
-  enable_calert                             = true
+  enable_calert                             = false
   enable_alertmanager_cloudfunction_routing = false
   alertmanager_alerts_to_silence            = "alert1|alert2" # pass in | separated string  of alerts to silence
   alertmanager_chat_alert_channels          = ([
@@ -118,6 +121,9 @@ module "kube_prometheus_stack" {
       endpoint                   = "" # google chat webhook url
     },
   ])
+  # fields required if grafana_ingress_enabled = true
+  alertmanager_tls_cert                 = "" # value containing alertmanager tls cert
+  alertmanager_tls_private_key          = "" # value containing alertmanager tls private key
 
   # grafana configs
   grafana_enabled                  = true

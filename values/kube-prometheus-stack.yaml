@@ -149,32 +149,28 @@ alertmanager:
         - receiver: "${receiver.name}"
           continue: ${receiver.continue}
 
-          %{~ if receiver.group_by != null }
+          %{~ if receiver.group_by != "" }
           group_by: "${receiver.group_by}"
           %{~ endif }
 
-          %{~ if receiver.repeat_interval != null }
+          %{~ if receiver.repeat_interval != "" }
           repeat_interval: "${receiver.repeat_interval}"
           %{~ endif }
 
           match_re:
-            %{~ if receiver.match_alertname != null }
+            %{~ if receiver.match_alertname != "" }
             alertname: "${receiver.match_alertname}"
             %{~ endif }
 
-            %{~ if receiver.match_namespace != null }
+            %{~ if receiver.match_namespace != "" }
             namespace: "${receiver.match_namespace}"
             %{~ endif }
 
-            %{~ if receiver.match_company_program != null }
-            program: "${receiver.match_company_program}"
-            %{~ endif }
-
-            %{~ if receiver.match_gitlab_repo != null }
+            %{~ if receiver.match_gitlab_repo != "" }
             project: "${receiver.match_gitlab_repo}"
             %{~ endif }
 
-            %{~ if receiver.match_gitlab_group_id != null }
+            %{~ if receiver.match_gitlab_group_id != "" }
             project: "${receiver.match_gitlab_group_id}"
             %{~ endif }
         %{~ endfor }
@@ -185,35 +181,32 @@ alertmanager:
         - receiver: "${receiver.name}"
           continue: ${receiver.continue}
 
-          %{~ if receiver.group_by != null }
+          %{~ if receiver.group_by != "" }
           group_by: "${receiver.group_by}"
           %{~ endif }
 
-          %{~ if receiver.repeat_interval != null }
+          %{~ if receiver.repeat_interval != "" }
           repeat_interval: "${receiver.repeat_interval}"
           %{~ endif }
 
           match_re:
 
-            %{~ if receiver.match_alertname != null }
+            %{~ if receiver.match_alertname != "" }
             alertname: "${receiver.match_alertname}"
             %{~ endif }
 
-            %{~ if receiver.match_namespace != null }
+            %{~ if receiver.match_namespace != "" }
             namespace: "${receiver.match_namespace}"
             %{~ endif }
 
-            %{~ if receiver.match_gitlab_repo != null }
+            %{~ if receiver.match_gitlab_repo != "" }
             project: "${receiver.match_gitlab_repo}"
             %{~ endif }
 
-            %{~ if receiver.match_gitlab_group_id != null }
+            %{~ if receiver.match_gitlab_group_id != "" }
             project: "${receiver.match_gitlab_group_id}"
             %{~ endif }
 
-            %{~ if receiver.match_company_program != null }
-            program: "${receiver.match_company_program}"
-            %{~ endif }
         %{~ endfor }
         %{~ endif }
 

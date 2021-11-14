@@ -9,6 +9,12 @@ variable "dns_public_zone" {
   default     = ""
   description = "Public Managed Zone"
 }
+
+variable "namespace" {
+  type        = string
+  description = "Namespace to install kube-prometheus-stack and related resources into"
+}
+
 variable "dns_name" {
   type        = string
   default     = ""
@@ -45,31 +51,31 @@ variable "metrics_scope_project_id" {
 variable "prometheus_resource_cpu_limit" {
   type        = string
   description = "Prometheus pod cpu limit"
-  default     = "2"
+  default     = "1"
 }
 
 variable "prometheus_resource_cpu_requests" {
   type        = string
   description = "Prometheus pod cpu requests"
-  default     = "2"
+  default     = "500m"
 }
 
 variable "prometheus_resource_memory_limit" {
   type        = string
   description = "Prometheus pod memory limit"
-  default     = "8Gi"
+  default     = "4Gi"
 }
 
 variable "prometheus_resource_memory_requests" {
   type        = string
   description = "Prometheus pod memory requests"
-  default     = "6Bi"
+  default     = "2Gi"
 }
 
 variable "prometheus_retention_size_gb" {
   type        = string
   description = "Prometheus retention size"
-  default     = "200"
+  default     = "50"
 }
 
 variable "prometheus_ingress_enabled" {
@@ -101,7 +107,7 @@ variable "alertmanager_enabled" {
 variable "alertmanager_replicas" {
   type        = number
   description = "Count of Alertmanager replicas"
-  default     = 2
+  default     = 1
 }
 
 variable "alertmanager_log_level" {
@@ -155,7 +161,7 @@ variable "grafana_ingress_enabled" {
 variable "grafana_replicas" {
   type        = number
   description = "Count of Grafana replicas"
-  default     = 2
+  default     = 1
 }
 
 variable "grafana_resource_cpu_limit" {
@@ -210,6 +216,20 @@ variable "prometheus_tls_private_key" {
   default     = ""
 }
 
+variable "alertmanager_tls_cert" {
+  description = "Alertmanager TLS certificate"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "alertmanager_tls_private_key" {
+  description = "Alertmanager TLS private key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 
 variable "grafana_oauth_client_id" {
   description = "Grafana OAuth client ID"
@@ -248,9 +268,9 @@ variable "stackdriver_metrics_filter" {
   default     = [""]
   description = "Pass in stackdriver metrics for a filter"
 }
+
 variable "gke_cluster_name" {
   type        = string
-  default     = ""
   description = "Name of the GKE cluster, only necessary if prometheus_to_stackdriver_enabled is set to true"
 }
 
@@ -291,13 +311,13 @@ variable "enable_prometheus_webexteams" {
 variable "alertmanager_alert_chat_channels" {
   description = "alert channels for a chat client"
   type        = any
-  default     = []
+  default     = [""]
 }
 
 variable "alertmanager_alert_webex_teams_channels" {
   description = "alert channels for a chat client"
   type        = any
-  default     = []
+  default     = [""]
 }
 
 
@@ -311,7 +331,7 @@ variable "prom_stack_common_label" {
 variable "prometheus_scrape_configs" {
   type        = any
   description = "additional scrape configs for prometheus"
-  default     = []
+  default     = [""]
 }
 
 variable "alertmanager_alerts_to_silence" {
