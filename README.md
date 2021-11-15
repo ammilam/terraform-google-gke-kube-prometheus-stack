@@ -196,11 +196,11 @@ Prometheus Rules can easily be defined using a custom [Prometheus Rule Helm Char
 See below for field definitions and an example...
 
 ```terraform
-resource "helm_release" "consul_prometheus_rule" {
-  name             = ""
-  namespace        = ""
-  repository       = "https://artifactory.company.com/artifactory/company-helm"
-  chart            = ""
+resource "helm_release" "example_rule" {
+  name             = "rules"
+  namespace        = "monitoring"
+  repository       = "https://ammilam.github.io/helm-charts/"
+  chart            = "prometheus-rule"
   version          = "0.1.6"
   create_namespace = "false"
   max_history      = 10
