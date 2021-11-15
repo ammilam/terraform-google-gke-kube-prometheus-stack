@@ -37,8 +37,8 @@ prometheus:
     %{~ endif }
   service:
     enabled: true
-    %{~ if PROMETHEUS_INGRESS_ENABLED ==true }
-    annotations: # https://cloud.google.com/kubernetes-engine/docs/how-to/load-balance-ingress#service_annotations_related_to_ingress
+    %{~ if PROMETHEUS_INGRESS_ENABLED == true }
+    annotations:
       cloud.google.com/backend-config: '{"default": "${PROMETHEUS_INGRESS_CONFIGS}"}'
       cloud.google.com/neg: '{"ingress": true}'
     %{~ endif }
@@ -137,20 +137,20 @@ alertmanager:
       kubernetes.io/ingress.class: gce
       kubernetes.io/ingress.global-static-ip-name: ${ALERTMANAGER_IP_NAME}
       networking.gke.io/v1beta1.FrontendConfig: ${ALERTMANAGER_INGRESS_CONFIGS}
+    labels: {}
     hosts:
     - ${ALERTMANAGER_HOST_NAME}
     paths:
     - /*
     pathType: ImplementationSpecific
     tls:
-    - hosts:
-      - ${ALERTMANAGER_HOST_NAME}
-      secretName: ${ALERTMANAGER_CERT_NAME}
+    - secretName: ${ALERTMANAGER_CERT_NAME}
+      hosts:
+       - ${ALERTMANAGER_HOST_NAME}
     %{~ endif }
   service:
-    enabled: true
-    %{~ if ALERTMANAGER_INGRESS_ENABLED ==true }
-    annotations: # https://cloud.google.com/kubernetes-engine/docs/how-to/load-balance-ingress#service_annotations_related_to_ingress
+    %{~ if ALERTMANAGER_INGRESS_ENABLED == true }
+    annotations:
       cloud.google.com/backend-config: '{"default": "${ALERTMANAGER_INGRESS_CONFIGS}"}'
       cloud.google.com/neg: '{"ingress": true}'
     %{~ endif }
@@ -168,7 +168,7 @@ alertmanager:
       repeat_interval: 4h
       receiver: blackhole
       routes:
-        %{~ if length(tolist(ALERTMANAGER_WEBHOOK_RECEIVERS)) != 0 }
+        %{~ if ALERTMANAGER_WEBHOOK_RECEIVERS != [""] }
         %{~ for receiver in ALERTMANAGER_WEBHOOK_RECEIVERS }
         - receiver: "${receiver.name}"
           continue: ${receiver.continue}
@@ -200,7 +200,7 @@ alertmanager:
         %{~ endfor }
         %{~ endif }
 
-        %{~ if length(tolist(ALERTMANAGER_WEBEX_TEAMS_RECEIVERS )) != 0 }
+        %{~ if ALERTMANAGER_WEBEX_TEAMS_RECEIVERS != [""] }
         %{~ for receiver in ALERTMANAGER_WEBEX_TEAMS_RECEIVERS }
         - receiver: "${receiver.name}"
           continue: ${receiver.continue}
@@ -241,7 +241,7 @@ alertmanager:
             alertname: ${ALERTMANAGER_ALERTS_TO_SILENCE}
         %{~ endif }
     receivers:
-    %{~ if length(tolist(ALERTMANAGER_WEBEX_TEAMS_RECEIVERS)) != 0 }
+    %{~ if ALERTMANAGER_WEBEX_TEAMS_RECEIVERS != [""] }
       %{~ for receiver in ALERTMANAGER_WEBEX_TEAMS_RECEIVERS }
       - name: ${receiver.name}
         webhook_configs:
@@ -250,7 +250,7 @@ alertmanager:
       %{~ endfor }
       %{~ endif }
 
-      %{~ if length(tolist(ALERTMANAGER_WEBHOOK_RECEIVERS)) != 0 }
+      %{~ if ALERTMANAGER_WEBHOOK_RECEIVERS != [""] }
       %{~ for receiver in ALERTMANAGER_WEBHOOK_RECEIVERS }
       - name: ${receiver.name}
         webhook_configs:
@@ -259,10 +259,6 @@ alertmanager:
       %{~ endfor }
       %{~ endif }
       - name: blackhole
-  ingress:
-    enabled: ${ALERTMANAGER_INGRESS_ENABLED}
-  service:
-    type: ClusterIP
   alertmanagerSpec:
     image:
       repository: quay.io/prometheus/alertmanager

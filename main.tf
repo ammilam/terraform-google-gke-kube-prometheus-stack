@@ -146,7 +146,7 @@ locals {
   alertmanager_ip_name   = "global-alertmanager-ip-${local.env.short_id}-${var.suffix}"
   grafana_host           = var.grafana_ingress_enabled == true ? trimsuffix("grafana${terraform.workspace == "default" ? "" : ".${terraform.workspace}"}.${var.dns_name}", ".") : "localhost:3000"
   prometheus_host        = var.prometheus_ingress_enabled == true ? trimsuffix("prometheus${terraform.workspace == "default" ? "" : ".${terraform.workspace}"}.${var.dns_name}", ".") : "localhost:9090"
-  alertmanager_host      = var.alertmanager_ingress_enabled == true ? trimsuffix("alertmanager${terraform.workspace == "default" ? "" : ".${terraform.workspace}"}.${var.dns_name}", ".") : "localhost:9091"
+  alertmanager_host      = var.alertmanager_ingress_enabled == true ? trimsuffix("alertmanager${terraform.workspace == "default" ? "" : ".${terraform.workspace}"}.${var.dns_name}", ".") : "localhost:9093"
 }
 
 
@@ -258,7 +258,7 @@ resource "helm_release" "grafana_managed_cert" {
 
 # GCP Ingress Custom Resources that utilizes iap for use with google auth magic
 resource "helm_release" "grafana_gcp_ingress_configs" {
-  name             = terraform.workspace == "default" ? "grafana" : substr(replace("rev-graf-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
+  name             = "grafana-ingress-configs"
   count            = var.grafana_ingress_enabled == true ? 1 : 0
   namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
@@ -296,7 +296,7 @@ resource "helm_release" "grafana_gcp_ingress_configs" {
 
 # GCP Ingress Custom Resources that utilizes iap for use with google auth magic
 resource "helm_release" "prometheus_gcp_ingress_configs" {
-  name             = terraform.workspace == "default" ? "prometheus" : substr(replace("rev-prom-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
+  name             = "prometheus-ingress-config"
   count            = var.prometheus_ingress_enabled == true ? 1 : 0
   namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
@@ -412,7 +412,7 @@ resource "google_compute_global_address" "prometheus" {
 
 # GCP Ingress Custom Resources that utilizes iap for use with google auth magic
 resource "helm_release" "alertmanager_gcp_ingress_configs" {
-  name             = terraform.workspace == "default" ? "alertmanager" : substr(replace("rev-am-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
+  name             = "alertmanager-ingress-configs"
   count            = var.alertmanager_ingress_enabled == true ? 1 : 0
   namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
@@ -432,7 +432,7 @@ resource "helm_release" "alertmanager_gcp_ingress_configs" {
         healthCheck:
           type: HTTP
           requestPath: /-/healthy
-          port: 9091
+          port: 9093
       logging:
         enable: true
         # https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#direct_health
@@ -521,6 +521,8 @@ resource "helm_release" "prometheus_stack" {
       PROMETHEUS_IP_NAME                    = local.prometheus_ip_name
       ALERTMANAGER_IP_NAME                  = local.alertmanager_ip_name
       GRAFANA_INGRESS_ENABLED               = var.grafana_ingress_enabled
+      PROMETHEUS_INGRESS_ENABLED            = var.prometheus_ingress_enabled
+      ALERTMANAGER_INGRESS_ENABLED          = var.alertmanager_ingress_enabled
       GRAFANA_PKI                           = var.google_managed_cert == false ? local.grafana_cert_name : ""
       KUBERNETES_SERVICE_ACCOUNT            = kubernetes_service_account.kube_prometheus_stack.metadata.0.name
       CLIENT_SECRET                         = var.grafana_oauth_client_secret
@@ -532,9 +534,6 @@ resource "helm_release" "prometheus_stack" {
       NAMESPACE                             = var.namespace
       ENV                                   = var.env
       GOOGLE_APPLICATION_CREDENTIALS_SECRET = var.google_application_credentials_secret
-      GRAFANA_INGRESS_ENABLED               = var.grafana_ingress_enabled
-      PROMETHEUS_INGRESS_ENABLED            = var.prometheus_ingress_enabled
-      ALERTMANAGER_INGRESS_ENABLED          = var.alertmanager_ingress_enabled
       PROMETHEUS_LOG_LEVEL                  = var.prometheus_log_level
       MONITORING_SERVICE_ACCOUNT_EMAIL      = google_service_account.kube_prometheus_stack.email
       metrics_scope_project_id              = var.metrics_scope_project_id
