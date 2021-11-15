@@ -61,7 +61,8 @@ module "kube_prometheus_stack" {
     helm       = # reference helm provider config here
   }
 
-  source                      = "<source>"
+  source                      = "ammilam/gke-kube-prometheus-stack/google"
+  version                     = "0.1.1"
   env                         = "prod" # prod or non-prod, particularly useful if creating review namespaces in a single cluster
   suffix                      = "" # dynamically generated suffix for preventing resoure naming conflicts
   namespace                   = "" # namespace in which to install kube-prometheus-stack
