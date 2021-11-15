@@ -1,7 +1,19 @@
+variable "chart_version" {
+  type        = string
+  description = "Version of the kube-prometheus-stack helm chart"
+  default     = "17.1.3"
+}
+
+variable "chart_repository" {
+  type        = string
+  description = "Helm chart repository for kube-prometheus-stack"
+  default     = "https://prometheus-community.github.io/helm-charts"
+}
+
 variable "dns_managed_zone" {
   type        = string
   default     = ""
-  description = "company Internal DNS Managed Zone"
+  description = "Internal DNS Managed Zone"
 }
 
 variable "dns_public_zone" {

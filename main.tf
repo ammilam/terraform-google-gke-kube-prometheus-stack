@@ -493,8 +493,10 @@ resource "google_compute_global_address" "alertmanager" {
 resource "helm_release" "prometheus_stack" {
   name             = "kube-prometheus-stack"
   namespace        = var.namespace
-  chart            = "${path.module}/charts/kube-prometheus-stack"
   max_history      = 10
+  repository       = var.chart_repository
+  chart            = "kube-prometheus-stack"
+  version          = var.chart_version
   wait             = false
   create_namespace = false
 
