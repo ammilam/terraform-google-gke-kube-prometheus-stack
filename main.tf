@@ -59,30 +59,6 @@ resource "google_project_iam_member" "monitoring_viewer" {
 }
 
 
-# provides alert routing to google chat for alertmanager
-resource "helm_release" "calert" {
-  name        = "calert"
-  count       = var.enable_calert ? 1 : 0
-  namespace   = var.namespace
-  chart       = "${path.module}/charts/calert"
-  max_history = 10
-
-  values = [
-    templatefile("${path.module}/values/calert.yaml", {
-      ROOMS = var.alertmanager_alert_chat_channels == "" ? [] : [
-        for channel in var.alertmanager_alert_chat_channels : {
-          name = channel.alertmanager_receiver_name
-          webhook = "${channel.endpoint}&threadKey=${
-            try(channel.match_gitlab_project, "") != null ? channel.match_gitlab_project :
-            try(channel.match_davita_program, "") != null ? channel.match_davita_program :
-            var.gke_cluster_name
-          }"
-        } if try(channel.alertmanager_receiver_name, "") != ""
-      ]
-    })
-  ]
-}
-
 
 # role required for prometheus to write metrics to gcp
 resource "google_project_iam_member" "monitoring_metrics_writer" {
@@ -579,21 +555,8 @@ resource "helm_release" "prometheus_stack" {
         }
       ]
       ALERTMANAGER_WEBHOOK_RECEIVERS = [
-        for channel in var.alertmanager_alert_chat_channels : {
-          name                  = try(channel.alertmanager_receiver_name, "")
-          match_namespace       = try(channel.match_namespace, "")
-          match_alertname       = try(channel.match_alertname, "")
-          group_by              = try(channel.group_by, "")
-          repeat_interval       = try(channel.repeat_interval, "")
-          match_gitlab_group_id = try(channel.match_gitlab_group_id, "")
-          match_gitlab_repo     = try(channel.match_repo, "")
-          continue              = try(channel.continue, false)
-          send_resolved         = try(channel.send_resolved, false)
-        }
-      ]
-      ALERTMANAGER_WEBEX_TEAMS_RECEIVERS = [
-        for channel in var.alertmanager_alert_webex_teams_channels : {
-          name                  = try(channel.alertmanager_receiver_name, "")
+        for channel in var.alertmanager_webhook_receivers : {
+          name                  = try(channel.receiver_name, "")
           endpoint              = try(channel.endpoint, "")
           match_namespace       = try(channel.match_namespace, "")
           match_alertname       = try(channel.match_alertname, "")

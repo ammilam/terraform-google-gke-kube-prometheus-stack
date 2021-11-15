@@ -112,13 +112,13 @@ module "kube_prometheus_stack" {
   enable_calert                             = false
   enable_alertmanager_cloudfunction_routing = false
   alertmanager_alerts_to_silence            = "alert1|alert2" # pass in | separated string  of alerts to silence
-  alertmanager_chat_alert_channels          = ([
+  alertmanager_webhook_receivers.           = ([
     {
-  # list of google chat webhook receivers
-      alertmanager_receiver_name = "" # name of the receiver to create
+  # list of webhook receivers
+      receiver_name = "" # name of the receiver to create
       match_alertname            = "" # filter for alerts to route here by alertname
       match_namespace            = "" # filter for alerts to route here by namespace
-      endpoint                   = "" # google chat webhook url
+      endpoint                   = "" # webhook url to route alerts to
     },
   ])
   # fields required if grafana_ingress_enabled = true
@@ -265,24 +265,23 @@ resource "helm_release" "gitlab_prometheus_rule" {
 
 ### Alertmanager
 
-#### Google Chat Alert Channels
+#### Webhook Alert Channels
 
-Once an alert rule has been defined, as detailed under [Prometheus Rules](#prometheus-rules), it can be routed to a Google Chat room using `calert`. If the `enable_calert` flag is set to `true` a calert instance will be deployed alongside the rest of the resources in the monitoring namespace. Channels are created by passing a list of configs into the `alertmanager_chat_alert_channels` variable as detailed below...
+Once an alert rule has been defined, as detailed under [Prometheus Rules](#prometheus-rules), it can be routed to a Webhook by using configs like below. Channels are created by passing a list of configs into the `alertmanager_webhook_receivers` variable as detailed below...
 
 ```terraform
-  enable_calert                             = true # deploys a calert instance
 
   # creates the chat channels
-  alertmanager_chat_alert_channels          = ([
+  alertmanager_webhook_receivers          = ([
     {
-      alertmanager_receiver_name = "" # name of the receiver to create
-      match_alertname            = "" # filter for alerts to route here by alertname
-      match_namespace            = "" # filter for alerts to route here by namespace
-      endpoint                   = "" # google chat webhook url
+      receiver_name   = "" # name of the receiver to create
+      match_alertname = "" # filter for alerts to route here by alertname
+      match_namespace = "" # filter for alerts to route here by namespace
+      endpoint        = "" # webhook url
     },
   ```
 
-##### Example Google Chat Alert Channel
+##### Example Webhook Alert Channel
 
 Below is a Google Chat alert channel used in the shared services implementation.
 
@@ -291,9 +290,9 @@ chat_channels = ([
 
     # consul support channel
     {
-      alertmanager_receiver_name = "consul"                      # names the receiver
-      match_namespace            = "consul"                      # filters for all rules in the consul namespace
-      endpoint                   = "https://chat.googleapis...." # webhook endpoint for the alert
+      receiver_name   = "consul"                         # names the receiver
+      match_namespace = "consul"                         # filters for all rules in the consul namespace
+      endpoint        = "https://i-am-a-webhook-url...." # webhook endpoint for the alert
     },
   ])
 

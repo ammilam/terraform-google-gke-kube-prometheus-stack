@@ -1,5 +1,0 @@
-CAlert is now deployed!
-
-Validate CAlert -> GChat integration by testing a message using the following:
-k port-forward svc/calert 6000:6000
-test/send_alert.sh

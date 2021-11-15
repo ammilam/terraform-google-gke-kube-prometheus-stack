@@ -182,38 +182,6 @@ alertmanager:
           %{~ endif }
 
           match_re:
-            %{~ if receiver.match_alertname != "" }
-            alertname: "${receiver.match_alertname}"
-            %{~ endif }
-
-            %{~ if receiver.match_namespace != "" }
-            namespace: "${receiver.match_namespace}"
-            %{~ endif }
-
-            %{~ if receiver.match_gitlab_repo != "" }
-            project: "${receiver.match_gitlab_repo}"
-            %{~ endif }
-
-            %{~ if receiver.match_gitlab_group_id != "" }
-            project: "${receiver.match_gitlab_group_id}"
-            %{~ endif }
-        %{~ endfor }
-        %{~ endif }
-
-        %{~ if ALERTMANAGER_WEBEX_TEAMS_RECEIVERS != [""] }
-        %{~ for receiver in ALERTMANAGER_WEBEX_TEAMS_RECEIVERS }
-        - receiver: "${receiver.name}"
-          continue: ${receiver.continue}
-
-          %{~ if receiver.group_by != "" }
-          group_by: "${receiver.group_by}"
-          %{~ endif }
-
-          %{~ if receiver.repeat_interval != "" }
-          repeat_interval: "${receiver.repeat_interval}"
-          %{~ endif }
-
-          match_re:
 
             %{~ if receiver.match_alertname != "" }
             alertname: "${receiver.match_alertname}"
@@ -241,20 +209,11 @@ alertmanager:
             alertname: ${ALERTMANAGER_ALERTS_TO_SILENCE}
         %{~ endif }
     receivers:
-    %{~ if ALERTMANAGER_WEBEX_TEAMS_RECEIVERS != [""] }
-      %{~ for receiver in ALERTMANAGER_WEBEX_TEAMS_RECEIVERS }
-      - name: ${receiver.name}
-        webhook_configs:
-        - url: ${receiver.endpoint}
-          send_resolved: ${receiver.send_resolved}
-      %{~ endfor }
-      %{~ endif }
-
-      %{~ if ALERTMANAGER_WEBHOOK_RECEIVERS != [""] }
+    %{~ if ALERTMANAGER_WEBHOOK_RECEIVERS != [""] }
       %{~ for receiver in ALERTMANAGER_WEBHOOK_RECEIVERS }
       - name: ${receiver.name}
         webhook_configs:
-        - url: "http://calert:6000/create?room_name=${receiver.name}"
+        - url: ${receiver.endpoint}
           send_resolved: ${receiver.send_resolved}
       %{~ endfor }
       %{~ endif }

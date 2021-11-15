@@ -303,16 +303,6 @@ variable "region" {
   default = "us-central1"
 }
 
-variable "alertmanager_chat_receiver_object" {
-  type    = any
-  default = {}
-}
-
-variable "enable_calert" {
-  type        = bool
-  default     = false
-  description = "Enables calert for google chat alert routing"
-}
 
 variable "enable_prometheus_webexteams" {
   description = "Whether to enable Prometheus-WebexTeams for WebEx chat room alert routing"
@@ -320,13 +310,7 @@ variable "enable_prometheus_webexteams" {
   default     = false
 }
 
-variable "alertmanager_alert_chat_channels" {
-  description = "alert channels for a chat client"
-  type        = any
-  default     = [""]
-}
-
-variable "alertmanager_alert_webex_teams_channels" {
+variable "alertmanager_webhook_receivers" {
   description = "alert channels for a chat client"
   type        = any
   default     = [""]
