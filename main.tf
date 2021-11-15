@@ -412,7 +412,7 @@ resource "google_compute_global_address" "prometheus" {
 
 # GCP Ingress Custom Resources that utilizes iap for use with google auth magic
 resource "helm_release" "alertmanager_gcp_ingress_configs" {
-  name             = terraform.workspace == "default" ? "prometheus" : substr(replace("rev-prom-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
+  name             = terraform.workspace == "default" ? "alertmanager" : substr(replace("rev-am-${local.env.short_id}-${var.suffix}", "-", ""), 0, 30)
   count            = var.alertmanager_ingress_enabled == true ? 1 : 0
   namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
