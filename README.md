@@ -1,6 +1,6 @@
 # kube-prometheus-stack module
 
-This sub-directory contains a terraform module that will deploy a kube-prometheus-stack helm chart and supporting resources. The helm chart is configured to use a GCE ingress with Google OAUTH for authentication, because of this this module has a few requirements to make this happen.
+This terraform module deploys a kube-prometheus-stack helm chart and supporting resources onto a GKE cluster. The helm chart is configured to use a GCE ingresses with the option of OIDC enablement for Grafana.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ This sub-directory contains a terraform module that will deploy a kube-prometheu
 ## Prerequisites
 
 * Have a GKE cluster to deploy this into in the first place
-* Have a Google monitoring scope created with the cluster project joined to it, see the [monitoring module](../monitoring)
+* Have a [Google Metrics Scope](https://cloud.google.com/monitoring/settings#concept-scope) configured
 * Have helm and kubernetes provider configs that reference a gke cluster's endpoint, cluster cert, and oauth access token
 
 ## Configuring Kubernetes and Helm Providers
@@ -246,15 +246,15 @@ resource "helm_release" "gitlab_prometheus_rule" {
     groups:
     - name: gitlab.rules
       rules:
-      - alert: CWOWGitlabReviewStageFailures
-        expr: sum by(project, kind, ref, stage, status, job_name) (gitlab_ci_pipeline_job_status{job="cwow-gitlab-ci-pipelines-exporter",job_name=~".+(stop|review).*",kind="merge-request",status="failed"}) >0
+      - alert: GitlabReviewStageFailures
+        expr: sum by(project, kind, ref, stage, status, job_name) (gitlab_ci_pipeline_job_status{job="gitlab-ci-pipelines-exporter",job_name=~".+(stop|review).*",kind="merge-request",status="failed"}) >0
         for: 12h
         labels:
           severity: critical
           application: gitlab
         annotations:
           summary: 'Gitlab stop|review stage has been in failure for >12 hours, environments likely need to be cleaned up'
-          merge_request: 'https://gitlab.gcp.company.com/{{ $labels.project }}/-/merge_requests/{{ $labels.ref }}'
+          merge_request: 'https://gitlab.com/{{ $labels.project }}/-/merge_requests/{{ $labels.ref }}'
           project: '{{ $labels.project }}'
           job_name:  '{{ $labels.job_name }}'
           status: '{{ $labels.status }}'
@@ -284,7 +284,7 @@ Once an alert rule has been defined, as detailed under [Prometheus Rules](#prome
 
 ##### Example Google Chat Alert Channel
 
-Below is a Google Chat alert channel used in the shared services implementation, contained under [/infra/main.tf](/infra/main.tf).
+Below is a Google Chat alert channel used in the shared services implementation.
 
 ```terraform
 chat_channels = ([
@@ -303,7 +303,7 @@ chat_channels = ([
 
 #### Grafana Dashboards
 
-Grafana Dashboards are deployed via the [grafana-dashboards module](/modules/grafana-dashboards).
+Grafana Dashboards are deployed via the [grafana-dashboards terraform module](https://registry.terraform.io/modules/ammilam/grafana-dashboards/kubernetes/latest).
 
 In order to start provisioning Grafana dashboards, simply create a directory and fill it with your favorite Grafana dashboards in valid [Grafana Dashboards Format](https://grafana.com/docs/grafana/latest/dashboards/json-model/) (if in doubt, make it in the gui and [export it](https://grafana.com/docs/grafana/latest/dashboards/export-import/)), then reference the directory in a module definiton like the example below...
 
@@ -321,7 +321,7 @@ module "grafana_dashboards" {
 
 ##### Example Grafana Dashboards
 
-Below is the shared services implementation, contained under [/infra/main.tf](/infra/main.tf).
+Below is an example implementation
 
 ```terraform
 module "grafana_dashboards" {
@@ -329,7 +329,7 @@ module "grafana_dashboards" {
   source                       = "ammilam/grafana-dashboards/kubernetes"
   version                      = "0.1.1"
   grafana_dashboards_directory = "${path.module}/grafana-dashboards"
-  monitoring_namespace         = module.kube_prometheus_stack.monitoring_namespace
-  grafana_dashboard_label      = local.grafana_dashboard_label
+  monitoring_namespace         = "monitoring"
+  grafana_dashboard_label      = "default"
 }
 ```
