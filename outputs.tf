@@ -2,12 +2,24 @@ output "grafana_base_url" {
   value = "https://${local.grafana_host}/"
 }
 
+output "grafana_ip_address" {
+  value = google_compute_global_address.grafana.*.address
+}
+
 output "alertmanager_base_url" {
   value = "https://${local.alertmanager_host}/"
 }
 
+output "alertmanager_ip_address" {
+  value = google_compute_global_address.alertmanager.*.address
+}
+
 output "prometheus_base_url" {
   value = "https://${local.prometheus_host}/"
+}
+
+output "prometheus_ip_address" {
+  value = google_compute_global_address.prometheus.*.address
 }
 
 output "helm_values" {
