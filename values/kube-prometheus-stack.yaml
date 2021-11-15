@@ -37,6 +37,7 @@ prometheus:
     %{~ endif }
   service:
     enabled: true
+    type: NodePort
     %{~ if PROMETHEUS_INGRESS_ENABLED == true }
     annotations:
       cloud.google.com/backend-config: '{"default": "${PROMETHEUS_INGRESS_CONFIGS}"}'
@@ -149,6 +150,7 @@ alertmanager:
        - ${ALERTMANAGER_HOST_NAME}
     %{~ endif }
   service:
+    type: NodePort
     %{~ if ALERTMANAGER_INGRESS_ENABLED == true }
     annotations:
       cloud.google.com/backend-config: '{"default": "${ALERTMANAGER_INGRESS_CONFIGS}"}'
@@ -335,12 +337,10 @@ grafana:
       kubernetes.io/ingress.class: gce
       kubernetes.io/ingress.global-static-ip-name: ${GRAFANA_IP_NAME}
       networking.gke.io/v1beta1.FrontendConfig: ${GRAFANA_INGRESS_CONFIGS}
-      %{~ endif }
     hosts:
       - ${GRAFANA_HOST_NAME}
     path: /*
     pathType: ImplementationSpecific
-    %{~ if !GOOGLE_MANAGED_CERT }
     tls:
     - secretName: ${GRAFANA_CERT_NAME}
       hosts:
