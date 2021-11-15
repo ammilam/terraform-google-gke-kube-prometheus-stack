@@ -78,10 +78,12 @@ module "kube_prometheus_stack" {
   # prometheus configs
   prometheus_enabled                  = true
   prometheus_ingress_enabled          = true
-  prometheus_replicas                 = 2
-  prometheus_resource_cpu_limit       = "2"
-  prometheus_resource_memory_limit    = "8Gi"
-  prometheus_resource_cpu_requests    = "2"
+  prometheus_resources = {
+    cpu_limit       = 1
+    memory_limit    = "2Gi"
+    cpu_requests    = "500m"
+    memory_requests = "1Gi"
+  }
   prometheus_resource_memory_requests = "6Gi"
   prometheus_retention_size_gb        = "200"
   prometheus_tls_cert                 = "" # value containing prometheus tls cert
@@ -105,11 +107,13 @@ module "kube_prometheus_stack" {
   # alertmanager configs
   alertmanager_enabled                  = true
   alertmanager_ingress_enabled          = true
-  alertmanager_replicas                 = 1
-  alertmanager_resource_cpu_limit       = "500m"
-  alertmanager_resource_memory_limit    = "256Mi"
-  alertmanager_resource_cpu_requests    = "200m"
-  alertmanager_resource_memory_requests = "128Mi"
+  alertmanager_replicas                 = "1"
+  alertmanager_resources = {
+    cpu_limits      = "250m"
+    memory_limits   = "256Mi"
+    cpu_requests    = "100m"
+    memory_requests = "128Mi"
+  }
   enable_calert                             = false
   enable_alertmanager_cloudfunction_routing = false
   alertmanager_alerts_to_silence            = "alert1|alert2" # pass in | separated string  of alerts to silence
@@ -130,10 +134,12 @@ module "kube_prometheus_stack" {
   grafana_enabled                  = true
   grafana_ingress_enabled          = true
   grafana_replicas                 = 1
-  grafana_resource_cpu_limit       = "500m"
-  grafana_resource_memory_limit    = "256Mi"
-  grafana_resource_cpu_requests    = "200m"
-  grafana_resource_memory_requests = "128Mi"
+  grafana_resources = {
+    cpu_limits      = "250m"
+    memory_limits   = "256Mi"
+    cpu_requests    = "100m"
+    memory_requests = "128Mi"
+  }
   # fields required if grafana_ingress_enabled = true
   grafana_tls_cert                 = "" # value containing grafana tls cert
   grafana_tls_private_key          = "" # value containing grafana tls private key

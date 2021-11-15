@@ -60,28 +60,10 @@ variable "metrics_scope_project_id" {
   description = "Monitoring Scope Project"
 }
 
-variable "prometheus_resource_cpu_limit" {
-  type        = string
-  description = "Prometheus pod cpu limit"
-  default     = "1"
-}
-
-variable "prometheus_resource_cpu_requests" {
-  type        = string
-  description = "Prometheus pod cpu requests"
-  default     = "500m"
-}
-
-variable "prometheus_resource_memory_limit" {
-  type        = string
-  description = "Prometheus pod memory limit"
-  default     = "4Gi"
-}
-
-variable "prometheus_resource_memory_requests" {
-  type        = string
-  description = "Prometheus pod memory requests"
-  default     = "2Gi"
+variable "prometheus_resources" {
+  type        = any
+  description = "Prometheus resource limits"
+  default     = {}
 }
 
 variable "prometheus_retention_size_gb" {
@@ -127,28 +109,10 @@ variable "alertmanager_log_level" {
   default = "info"
 }
 
-variable "alertmanager_resource_cpu_limit" {
-  type        = string
-  description = "Alertmanager pod cpu limit"
-  default     = "500m"
-}
-
-variable "alertmanager_resource_cpu_requests" {
-  type        = string
-  description = "Alertmanager pod cpu requests"
-  default     = "200m"
-}
-
-variable "alertmanager_resource_memory_limit" {
-  type        = string
-  description = "Alertmanager pod memory limit"
-  default     = "256Mi"
-}
-
-variable "alertmanager_resource_memory_requests" {
-  type        = string
-  description = "Alertmanager pod memory requests"
-  default     = "128Mi"
+variable "alertmanager_resources" {
+  type        = any
+  description = "Alertmanager resource limits"
+  default     = {}
 }
 
 variable "alertmanager_ingress_enabled" {
@@ -165,6 +129,7 @@ variable "grafana_dashboard_label" {
   default     = "grafana_dashboard"
   description = "label used to provision grafana dashboards"
 }
+
 variable "grafana_ingress_enabled" {
   type    = bool
   default = false
@@ -176,28 +141,10 @@ variable "grafana_replicas" {
   default     = 1
 }
 
-variable "grafana_resource_cpu_limit" {
-  type        = string
-  description = "Grafana pod cpu limit"
-  default     = "500m"
-}
-
-variable "grafana_resource_cpu_requests" {
-  type        = string
-  description = "Grafana pod cpu requests"
-  default     = "200m"
-}
-
-variable "grafana_resource_memory_limit" {
-  type        = string
-  description = "Grafana pod memory limit"
-  default     = "256Mi"
-}
-
-variable "grafana_resource_memory_requests" {
-  type        = string
-  description = "Grafana pod memory requests"
-  default     = "128Mi"
+variable "grafana_resources" {
+  type        = any
+  description = "Grafana resource limits"
+  default     = {}
 }
 
 variable "grafana_tls_cert" {
@@ -241,7 +188,6 @@ variable "alertmanager_tls_private_key" {
   sensitive   = true
   default     = ""
 }
-
 
 variable "grafana_oauth_client_id" {
   description = "Grafana OAuth client ID"
@@ -303,7 +249,6 @@ variable "region" {
   default = "us-central1"
 }
 
-
 variable "enable_prometheus_webexteams" {
   description = "Whether to enable Prometheus-WebexTeams for WebEx chat room alert routing"
   type        = bool
@@ -313,9 +258,8 @@ variable "enable_prometheus_webexteams" {
 variable "alertmanager_webhook_receivers" {
   description = "alert channels for a chat client"
   type        = any
-  default     = [""]
+  default     = null
 }
-
 
 variable "prom_stack_common_label" {
   type        = string
@@ -323,11 +267,10 @@ variable "prom_stack_common_label" {
   description = "label added to all resources created via kube-prometheus-stack helm chart, helps with prometheus rule ingestion"
 }
 
-
 variable "prometheus_scrape_configs" {
   type        = any
   description = "additional scrape configs for prometheus"
-  default     = [""]
+  default     = null
 }
 
 variable "alertmanager_alerts_to_silence" {
@@ -335,7 +278,6 @@ variable "alertmanager_alerts_to_silence" {
   description = "Alertmanager alerts to send to blackhole"
   default     = ""
 }
-
 
 variable "rbac" {
   type        = bool

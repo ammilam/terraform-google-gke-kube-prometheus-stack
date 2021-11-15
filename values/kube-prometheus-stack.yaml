@@ -37,14 +37,13 @@ prometheus:
     %{~ endif }
   service:
     enabled: true
-    type: NodePort
     %{~ if PROMETHEUS_INGRESS_ENABLED == true }
     annotations:
       cloud.google.com/backend-config: '{"default": "${PROMETHEUS_INGRESS_CONFIGS}"}'
       cloud.google.com/neg: '{"ingress": true}'
     %{~ endif }
   prometheusSpec:
-    %{~ if PROMETHEUS_TO_STACKDRIVER_ENABLED == true}
+    %{~ if PROMETHEUS_TO_STACKDRIVER_ENABLED == true }
     volumes:
     - name: ${PROMETHEUS_TO_STACKDRIVER_CONFIG_FILE}
       configMap:
@@ -70,13 +69,15 @@ prometheus:
     probeSelector:
       matchLabels:
         prometheus: ${COMMON_LABEL}
+    %{~ if PROMETHEUS_RESOURCES != {} }
     resources:
       limits:
-        cpu: ${PROMETHEUS_RESOURCE_CPU_LIMIT}
-        memory: ${PROMETHEUS_RESOURCE_MEMORY_LIMIT}
+        cpu: ${PROMETHEUS_RESOURCES.cpu_limits}
+        memory: ${PROMETHEUS_RESOURCES.memory_limits}
       requests:
-        cpu: ${PROMETHEUS_RESOURCE_CPU_REQUESTS}
-        memory: ${PROMETHEUS_RESOURCE_MEMORY_REQUESTS}
+        cpu: ${PROMETHEUS_RESOURCES.cpu_requests}
+        memory: ${PROMETHEUS_RESOURCES.memory_requests}
+    %{~ endif }
     retentionSize: ${PROMETHEUS_RETENTION_SIZE_GB}GiB
     retention: ${PROMETHEUS_RETENTION_LENGTH}
     storageSpec:
@@ -138,7 +139,6 @@ alertmanager:
       kubernetes.io/ingress.class: gce
       kubernetes.io/ingress.global-static-ip-name: ${ALERTMANAGER_IP_NAME}
       networking.gke.io/v1beta1.FrontendConfig: ${ALERTMANAGER_INGRESS_CONFIGS}
-    labels: {}
     hosts:
     - ${ALERTMANAGER_HOST_NAME}
     paths:
@@ -150,7 +150,6 @@ alertmanager:
        - ${ALERTMANAGER_HOST_NAME}
     %{~ endif }
   service:
-    type: NodePort
     %{~ if ALERTMANAGER_INGRESS_ENABLED == true }
     annotations:
       cloud.google.com/backend-config: '{"default": "${ALERTMANAGER_INGRESS_CONFIGS}"}'
@@ -170,40 +169,31 @@ alertmanager:
       repeat_interval: 4h
       receiver: blackhole
       routes:
-        %{~ if ALERTMANAGER_WEBHOOK_RECEIVERS != [""] }
+      %{~ if ALERTMANAGER_WEBHOOK_RECEIVERS != [""] }
         %{~ for receiver in ALERTMANAGER_WEBHOOK_RECEIVERS }
         - receiver: "${receiver.name}"
           continue: ${receiver.continue}
-
           %{~ if receiver.group_by != "" }
           group_by: "${receiver.group_by}"
           %{~ endif }
-
           %{~ if receiver.repeat_interval != "" }
           repeat_interval: "${receiver.repeat_interval}"
           %{~ endif }
-
           match_re:
-
             %{~ if receiver.match_alertname != "" }
             alertname: "${receiver.match_alertname}"
             %{~ endif }
-
             %{~ if receiver.match_namespace != "" }
             namespace: "${receiver.match_namespace}"
             %{~ endif }
-
             %{~ if receiver.match_gitlab_repo != "" }
             project: "${receiver.match_gitlab_repo}"
             %{~ endif }
-
             %{~ if receiver.match_gitlab_group_id != "" }
             project: "${receiver.match_gitlab_group_id}"
             %{~ endif }
-
         %{~ endfor }
-        %{~ endif }
-
+      %{~ endif }
         %{~ if ALERTMANAGER_ALERTS_TO_SILENCE != "" }
         - receiver: blackhole
           continue: true
@@ -236,13 +226,15 @@ alertmanager:
             resources:
               requests:
                 storage: 1Gi
+    %{~ if ALERTMANAGER_RESOURCES != {} }
     resources:
       limits:
-        cpu: ${ALERTMANAGER_RESOURCE_CPU_LIMIT}
-        memory: ${ALERTMANAGER_RESOURCE_MEMORY_LIMIT}
+        cpu: ${ALERTMANAGER_RESOURCES.cpu_limits}
+        memory: ${ALERTMANAGER_RESOURCES.memory_limits}
       requests:
-        cpu: ${ALERTMANAGER_RESOURCE_CPU_REQUESTS}
-        memory: ${ALERTMANAGER_RESOURCE_MEMORY_REQUESTS}
+        cpu: ${ALERTMANAGER_RESOURCES.cpu_requests}
+        memory: ${ALERTMANAGER_RESOURCES.memory_requests}
+    %{~ endif }
     podAntiAffinity: hard
     podAntiAffinityTopologyKey: kubernetes.io/hostname
 
@@ -264,13 +256,15 @@ grafana:
     - ${plugin}
     %{~ endfor }
   %{~ endif }
+  %{~ if GRAFANA_RESOURCES != {} }
   resources:
     limits:
-      cpu: ${GRAFANA_RESOURCE_CPU_LIMIT}
-      memory: ${GRAFANA_RESOURCE_MEMORY_LIMIT}
+      cpu: ${GRAFANA_RESOURCES.cpu_limits}
+      memory: ${GRAFANA_RESOURCES.memory_limits}
     requests:
-      cpu: ${GRAFANA_RESOURCE_CPU_REQUESTS}
-      memory: ${GRAFANA_RESOURCE_MEMORY_REQUESTS}
+      cpu: ${GRAFANA_RESOURCES.cpu_requests}
+      memory: ${GRAFANA_RESOURCES.memory_requests}
+    %{~ endif }
   replicas: ${GRAFANA_REPLICAS}
   enabled: ${GRAFANA_ENABLED}
   %{~ if GRAFANA_ADDITIONAL_DATASOURCES != "" }

@@ -234,7 +234,7 @@ resource "helm_release" "grafana_managed_cert" {
 
 # GCP Ingress Custom Resources that utilizes iap for use with google auth magic
 resource "helm_release" "grafana_gcp_ingress_configs" {
-  name             = "grafana-ingress-configs"
+  name             = "grafana"
   count            = var.grafana_ingress_enabled == true ? 1 : 0
   namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
@@ -272,7 +272,7 @@ resource "helm_release" "grafana_gcp_ingress_configs" {
 
 # GCP Ingress Custom Resources that utilizes iap for use with google auth magic
 resource "helm_release" "prometheus_gcp_ingress_configs" {
-  name             = "prometheus-ingress-config"
+  name             = "prometheus"
   count            = var.prometheus_ingress_enabled == true ? 1 : 0
   namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
@@ -388,7 +388,7 @@ resource "google_compute_global_address" "prometheus" {
 
 # GCP Ingress Custom Resources that utilizes iap for use with google auth magic
 resource "helm_release" "alertmanager_gcp_ingress_configs" {
-  name             = "alertmanager-ingress-configs"
+  name             = "alertmanager"
   count            = var.alertmanager_ingress_enabled == true ? 1 : 0
   namespace        = var.namespace
   chart            = "${path.module}/charts/gcp-ingress-configs"
@@ -406,7 +406,7 @@ resource "helm_release" "alertmanager_gcp_ingress_configs" {
       name: alertmanager
       spec:
         healthCheck:
-          type: HTTP
+          type: HTTPS
           requestPath: /-/healthy
           port: 9093
       logging:
@@ -484,10 +484,6 @@ resource "helm_release" "prometheus_stack" {
       ALERTMANAGER_STORAGE_CLASS_NAME       = "standard"
       ALERTMANAGER_REPLICAS                 = var.alertmanager_replicas
       ALERTMANAGER_LOG_LEVEL                = var.alertmanager_log_level
-      ALERTMANAGER_RESOURCE_CPU_LIMIT       = var.alertmanager_resource_cpu_limit
-      ALERTMANAGER_RESOURCE_MEMORY_LIMIT    = var.alertmanager_resource_memory_limit
-      ALERTMANAGER_RESOURCE_CPU_REQUESTS    = var.alertmanager_resource_cpu_requests
-      ALERTMANAGER_RESOURCE_MEMORY_REQUESTS = var.alertmanager_resource_memory_requests
       ALERTMANAGER_ALERTS_TO_SILENCE        = var.alertmanager_alerts_to_silence
       ALERTMANAGER_ENABLED                  = var.alertmanager_enabled
       GRAFANA_HOST_NAME                     = local.grafana_host
@@ -514,10 +510,9 @@ resource "helm_release" "prometheus_stack" {
       MONITORING_SERVICE_ACCOUNT_EMAIL      = google_service_account.kube_prometheus_stack.email
       metrics_scope_project_id              = var.metrics_scope_project_id
       GKE_CLUSTER_NAME                      = var.gke_cluster_name
-      PROMETHEUS_RESOURCE_CPU_LIMIT         = var.prometheus_resource_cpu_limit
-      PROMETHEUS_RESOURCE_MEMORY_LIMIT      = var.prometheus_resource_memory_limit
-      PROMETHEUS_RESOURCE_CPU_REQUESTS      = var.prometheus_resource_cpu_requests
-      PROMETHEUS_RESOURCE_MEMORY_REQUESTS   = var.prometheus_resource_memory_requests
+      PROMETHEUS_RESOURCES                  = var.prometheus_resources
+      ALERTMANAGER_RESOURCES                = var.alertmanager_resources
+      GRAFANA_RESOURCES                     = var.grafana_resources
       PROMETHEUS_TO_STACKDRIVER_ENABLED     = var.prometheus_to_stackdriver_enabled
       PROMETHEUS_RETENTION_SIZE_GB          = var.prometheus_retention_size_gb
       PROMETHEUS_RETENTION_LENGTH           = var.prometheus_retention_length
@@ -527,10 +522,6 @@ resource "helm_release" "prometheus_stack" {
       PROMETHEUS_ENABLED                    = var.prometheus_enabled
       GRAFANA_ENABLED                       = var.grafana_enabled
       GRAFANA_REPLICAS                      = var.grafana_replicas
-      GRAFANA_RESOURCE_CPU_LIMIT            = var.grafana_resource_cpu_limit
-      GRAFANA_RESOURCE_MEMORY_LIMIT         = var.grafana_resource_memory_limit
-      GRAFANA_RESOURCE_CPU_REQUESTS         = var.grafana_resource_cpu_requests
-      GRAFANA_RESOURCE_MEMORY_REQUESTS      = var.grafana_resource_memory_requests
       GRAFANA_STORAGE_CLASS_NAME            = "standard"
       GRAFANA_GOOGLE_AUTH_ENABLED           = var.grafana_google_auth_enabled
       GRAFANA_PLUGINS                       = var.grafana_plugins
@@ -542,7 +533,7 @@ resource "helm_release" "prometheus_stack" {
       GRAFANA_CERT_NAME                     = local.grafana_cert_name
       PROMETHEUS_CERT_NAME                  = local.prometheus_cert_name
       ALERTMANAGER_CERT_NAME                = local.alertmanager_cert_name
-      ADDITIONAL_SCRAPE_CONFIGS = [
+      ADDITIONAL_SCRAPE_CONFIGS = var.prometheus_scrape_configs != null ? [
         for job in var.prometheus_scrape_configs : {
           job_name        = try(job.job_name, "")
           metrics_path    = try(job.metrics_path, "/metrics")
@@ -553,8 +544,8 @@ resource "helm_release" "prometheus_stack" {
           scrape_timeout  = try(job.scrape_timeout, "10s")
           scrape_interval = try(job.scrape_interval, "1m")
         }
-      ]
-      ALERTMANAGER_WEBHOOK_RECEIVERS = [
+      ] : [""]
+      ALERTMANAGER_WEBHOOK_RECEIVERS = var.alertmanager_webhook_receivers != null ? [
         for channel in var.alertmanager_webhook_receivers : {
           name                  = try(channel.receiver_name, "")
           endpoint              = try(channel.endpoint, "")
@@ -567,7 +558,7 @@ resource "helm_release" "prometheus_stack" {
           continue              = try(channel.continue, false)
           send_resolved         = try(channel.send_resolved, false)
         }
-      ]
+      ] : [""]
     }))
   ]
 }
