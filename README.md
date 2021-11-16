@@ -14,8 +14,8 @@ This terraform module deploys a kube-prometheus-stack helm chart and supporting 
     * [Prometheus Rules](#prometheus-rules)
       * [Example PrometheusRule](#example-prometheusrule)
   * [Alertmanager](#alertmanager)
-    * [Google Chat Alert Channels](#google-chat-alert-channels)
-      * [Example Google Chat Alert Channel](#example-google-chat-alert-channel)
+    * [Webhook Alert Channels](#webhook-alert-channels)
+      * [Example Webhook Alert Channel](#example-webhook-alert-channel)
   * [Grafana](#grafana)
     * [Grafana Dashboards](#grafana-dashboards)
 
@@ -64,16 +64,16 @@ module "kube_prometheus_stack" {
   source                      = "ammilam/gke-kube-prometheus-stack/google"
   version                     = "<most-recent-tag>"
   env                         = "prod" # prod or non-prod, particularly useful if creating review namespaces in a single cluster
-  suffix                      = "" # dynamically generated suffix for preventing resoure naming conflicts
-  namespace                   = "" # namespace in which to install kube-prometheus-stack
-  project_id                  = "" # project_id containing the cluster
-  metrics_scope_project_id    = "" # monitoring scope project id to get gcp metrics
-  dns_managed_zone            = "" # dns managed zone for dns record creation
-  dns_managed_zone_project_id = "" # project containing dns public zone
-  dns_public_zone             = "" # dns public zone for dns record creation
-  dns_public_zone_project_id  = "" # project containing dns public zone for dns record creation
-  dns_name                    = "" # dns managed zone name for dns record creation
-  gke_cluster_name            = "" # pass in variable for gke cluster name
+  suffix                      = ""     # dynamically generated suffix for preventing resoure naming conflicts
+  namespace                   = ""     # namespace in which to install kube-prometheus-stack
+  project_id                  = ""     # project_id containing the cluster
+  metrics_scope_project_id    = ""     # monitoring scope project id to get gcp metrics
+  dns_managed_zone            = ""     # dns managed zone for dns record creation
+  dns_managed_zone_project_id = ""     # project containing dns public zone
+  dns_public_zone             = ""     # dns public zone for dns record creation
+  dns_public_zone_project_id  = ""     # project containing dns public zone for dns record creation
+  dns_name                    = ""     # dns managed zone name for dns record creation
+  gke_cluster_name            = ""     # pass in variable for gke cluster name
 
   # prometheus configs
   prometheus_enabled                  = true
@@ -86,21 +86,21 @@ module "kube_prometheus_stack" {
   }
   prometheus_resource_memory_requests = "6Gi"
   prometheus_retention_size_gb        = "200"
-  prometheus_tls_cert                 = "" # value containing prometheus tls cert
-  prometheus_tls_private_key          = "" # value containing prometheus tls private key
-  prometheus_to_stackdriver_enabled    = true # if set to true, as stackdriver sidecar is added to prometheus that sends selected variables
-  stackdriver_metrics_filter          = ["prometheus_metric", "prometheus_metric"] # pass in list of metrics to send from prometheus to stackdriver
+  prometheus_tls_cert                 = ""    # value containing prometheus tls cert
+  prometheus_tls_private_key          = ""    # value containing prometheus tls private key
+  prometheus_to_stackdriver_enabled    = true # creates sidecar to port metrics to stackdriver
+  stackdriver_metrics_filter          = [""]  # pass in list of metrics to send from prometheus to stackdriver
   # adds new prometheus scrape configs
   prometheus_scrape_configs = ([
      {
-      job_name        = "" # name of the Prometheus scrape job
+      job_name        = ""         # name of the Prometheus scrape job
       metrics_path    = "/metrics" # path the scrape target exposes metrics on
-      scheme          = "" # http|https
-      target          = [""] # list of targets to scrape from
-      scrape_timeout  = "" # timeout interval for the scrape config
-      scrape_interval = "" # frequency of the metrics scrape
-      param_key       = "" # part of k/v used for adding parameters to the scraped url, like auth tokens
-      param_value     = "" # part of k/v used for adding parameters to the scraped url, like auth tokens
+      scheme          = ""         # http|https
+      target          = [""]       # list of targets to scrape from
+      scrape_timeout  = ""         # timeout interval for the scrape config
+      scrape_interval = ""         # frequency of the metrics scrape
+      param_key       = ""         # part of k/v used for adding parameters to the scraped url, like auth tokens
+      param_value     = ""         # part of k/v used for adding parameters to the scraped url, like auth tokens
     }
   ])
 
@@ -115,8 +115,7 @@ module "kube_prometheus_stack" {
     memory_requests = "128Mi"
   }
   enable_calert                             = false
-  enable_alertmanager_cloudfunction_routing = false
-  alertmanager_alerts_to_silence            = "alert1|alert2" # pass in | separated string  of alerts to silence
+  alertmanager_alerts_to_silence            = "alert1|alert2" # pass in | separated string of alerts to silence
   alertmanager_webhook_receivers.           = ([
     {
   # list of webhook receivers
@@ -143,6 +142,7 @@ module "kube_prometheus_stack" {
   # fields required if grafana_ingress_enabled = true
   grafana_tls_cert                 = "" # value containing grafana tls cert
   grafana_tls_private_key          = "" # value containing grafana tls private key
+  grafana_oidc_enabled             = false 
   grafana_oauth_client_id          = "" # value containing grafana oauth client id, created outside of automation
   grafana_oauth_client_secret      = "" # value containing grafana oauth client secret, created outside of automation
 }
