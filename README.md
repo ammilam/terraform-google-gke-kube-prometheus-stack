@@ -279,7 +279,7 @@ Once an alert rule has been defined, as detailed under [Prometheus Rules](#prome
 ```terraform
 
   # creates the chat channels
-  alertmanager_webhook_receivers          = ([
+  alertmanager_webhook_receivers = ([
     {
       receiver_name   = "" # name of the receiver to create
       match_alertname = "" # filter for alerts to route here by alertname
@@ -314,17 +314,6 @@ Grafana Dashboards are deployed via the [grafana-dashboards terraform module](ht
 In order to start provisioning Grafana dashboards, simply create a directory and fill it with your favorite Grafana dashboards in valid [Grafana Dashboards Format](https://grafana.com/docs/grafana/latest/dashboards/json-model/) (if in doubt, make it in the gui and [export it](https://grafana.com/docs/grafana/latest/dashboards/export-import/)), then reference the directory in a module definiton like the example below...
 
 
-```terraform
-# grafana dashboards module
-module "grafana_dashboards" {
-
-  source                       = "ammilam/grafana-dashboards/kubernetes"
-  version                      = "0.1.1"
-  grafana_dashboards_directory = "${path.module}/grafana-dashboards" # directory containing the dashboards
-  monitoring_namespace         = module.kube_prometheus_stack.monitoring_namespace
-}
-```
-
 ##### Example Grafana Dashboards
 
 Below is an example implementation
@@ -333,9 +322,8 @@ Below is an example implementation
 module "grafana_dashboards" {
 
   source                       = "ammilam/grafana-dashboards/kubernetes"
-  version                      = "0.1.1"
+  version                      = "0.1.2"
   grafana_dashboards_directory = "${path.module}/grafana-dashboards"
   monitoring_namespace         = "monitoring"
-  grafana_dashboard_label      = "default"
 }
 ```
