@@ -1,6 +1,6 @@
 # kube-prometheus-stack module
 
-This terraform module deploys a kube-prometheus-stack helm chart and supporting resources onto a GKE cluster. The helm chart is configured to use a GCE ingresses with the option for Google OpenID Connect to be enabled for Grafana.
+This terraform module deploys a kube-prometheus-stack helm chart and supporting resources onto a GKE cluster. The helm chart is configured to use create GCE ingresses with the option for Google OpenID Connect to be enabled for Grafana.
 
 ## Table of Contents
 
