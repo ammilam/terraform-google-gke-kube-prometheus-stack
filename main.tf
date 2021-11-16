@@ -258,10 +258,6 @@ resource "helm_release" "grafana_gcp_ingress_configs" {
       logging:
         enable: true
         # https://cloud.google.com/kubernetes-engine/docs/how-to/ingress-features#direct_health
-        iap:
-          enabled: false
-          oauthclientCredentials:
-            secretName: ${local.grafana_cert_name}
     EOT
   ]
 }
@@ -406,8 +402,8 @@ resource "helm_release" "alertmanager_gcp_ingress_configs" {
       name: alertmanager
       spec:
         healthCheck:
-          type: HTTPS
-          requestPath: /-/healthy
+          type: HTTP
+          requestPath: /-/ready
           port: 9093
       logging:
         enable: true
@@ -523,7 +519,7 @@ resource "helm_release" "prometheus_stack" {
       GRAFANA_ENABLED                       = var.grafana_enabled
       GRAFANA_REPLICAS                      = var.grafana_replicas
       GRAFANA_STORAGE_CLASS_NAME            = "standard"
-      GRAFANA_GOOGLE_AUTH_ENABLED           = var.grafana_google_auth_enabled
+      GRAFANA_GOOGLE_AUTH_ENABLED           = var.grafana_oidc_enabled
       GRAFANA_PLUGINS                       = var.grafana_plugins
       GRAFANA_ADMIN_PASSWORD                = var.grafana_admin_password
       RBAC                                  = var.rbac

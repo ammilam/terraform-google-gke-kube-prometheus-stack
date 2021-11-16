@@ -4,6 +4,12 @@ variable "chart_version" {
   default     = "17.1.3"
 }
 
+variable "grafana_oidc_enabled" {
+  type        = bool
+  description = "Enable OpenID Connect with Google for Grafana"
+  default     = false
+}
+
 variable "chart_repository" {
   type        = string
   description = "Helm chart repository for kube-prometheus-stack"
@@ -80,7 +86,7 @@ variable "prometheus_ingress_enabled" {
 variable "prometheus_replicas" {
   type        = number
   description = "Count of Prometheus replicas"
-  default     = 2
+  default     = 1
 }
 
 variable "prometheus_enabled" {
@@ -209,12 +215,6 @@ variable "grafana_admin_password" {
   default     = "prom-operator"
 }
 
-variable "grafana_google_auth_enabled" {
-  type        = bool
-  description = "If set to true, this will enable OAUTH with company google credentials"
-  default     = false
-}
-
 variable "prometheus_to_stackdriver_enabled" {
   type        = bool
   default     = false
@@ -236,12 +236,6 @@ variable "google_managed_cert" {
   type        = bool
   default     = false
   description = "Will pass a google managed cert to the gce ingress configs"
-}
-
-variable "enable_alertmanager_cloudfunction_routing" {
-  type        = bool
-  default     = false
-  description = "If set to true, this will enable alertmanager to forward alerts to the alert routing cloud function"
 }
 
 variable "region" {

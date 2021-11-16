@@ -150,6 +150,7 @@ alertmanager:
        - ${ALERTMANAGER_HOST_NAME}
     %{~ endif }
   service:
+    enabled: true
     %{~ if ALERTMANAGER_INGRESS_ENABLED == true }
     annotations:
       cloud.google.com/backend-config: '{"default": "${ALERTMANAGER_INGRESS_CONFIGS}"}'
@@ -309,7 +310,7 @@ grafana:
       scopes: https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email
       auth_url: https://accounts.google.com/o/oauth2/auth
       token_url: https://accounts.google.com/o/oauth2/token
-      allowed_domains: company.com company.corp
+      # allowed_domains: company.com company.corp
       allow_sign_up: true
     %{~ endif }
   image:
