@@ -155,7 +155,6 @@ Below are details on configuration options for the various resources deployed in
 ### Prometheus
 
 #### Prometheus Scrape Configs
-
 In order to configure additional scrape configs for Prometheus outside of a service monitor, a scrape config can be created using the `prometheus_scrape_configs` variable. See below for field definitions and an example...
 
 ```terraform
@@ -309,10 +308,7 @@ chat_channels = ([
 
 #### Grafana Dashboards
 
-Grafana Dashboards are deployed via the [grafana-dashboards terraform module](https://registry.terraform.io/modules/ammilam/grafana-dashboards/kubernetes/latest).
-
-In order to start provisioning Grafana dashboards, simply create a directory and fill it with your favorite Grafana dashboards in valid [Grafana Dashboards Format](https://grafana.com/docs/grafana/latest/dashboards/json-model/) (if in doubt, make it in the gui and [export it](https://grafana.com/docs/grafana/latest/dashboards/export-import/)), then reference the directory in a module definiton like the example below...
-
+Grafana Dashboards can easily be provisioned as code via the [grafana-dashboards terraform module](https://registry.terraform.io/modules/ammilam/grafana-dashboards/kubernetes/latest). In order to start provisioning Grafana dashboards, simply create a directory and fill it with your favorite Grafana dashboards in valid [Grafana Dashboards Format](https://grafana.com/docs/grafana/latest/dashboards/json-model/) (if in doubt, make it in the gui and [export it](https://grafana.com/docs/grafana/latest/dashboards/export-import/)), then reference the directory in a module definiton like the example below...
 
 ##### Example Grafana Dashboards
 
